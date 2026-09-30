@@ -11,10 +11,14 @@ PR说明请包括：触发问题、修改后的行为、变更文件、测试命
 Windows PowerShell 示例：
 
 ```powershell
+python -m pip install -r requirements-dev.txt
+python -m unittest discover -s tests -p 'test_*.py' -v
+python -m examples.dummy_tool
 cd legacy/rc_floor
-python -m pip install -r requirements.txt
 python -m unittest discover -s tests -p 'test_*.py'
 ```
+
+以上从仓库根目录开始，前一套是Tool Core测试，后一套是旧程序87项回归。新Tool按照 [统一接口](docs/tool-core.md) 实现 `_execute`，由应用启动代码显式注册；通用核心不导入具体工程工具。
 
 这些测试不代替AutoCAD实机验证。修改 `RCFLOOR.lsp` 或CAD调用链时，另用独立测试图纸检查插入、撤销、重做、Esc、异常清理和保存回读。
 
