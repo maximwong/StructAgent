@@ -1,0 +1,6 @@
+*RF-HIDDEN,RF hidden outline
+A,100,-60
+*RF-CENTER,RF center axis
+A,250,-60,0,-60
+*RF-ERECT,RF erection reinforcement
+A,65,-35

@@ -1,0 +1,34 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+
+# Python and editor caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+
+# Generated engineering outputs and local acceptance evidence
+verification/
+**/STATUS.json
+**/设计说明书.docx
+**/设计说明书.pdf
+**/floor_data.dat
+**/drawing_scene.json
+*.dwg
+*.dxf
+*.bak
+*.sv$
+
+# This inherited diagnostic contains another machine's absolute path.
+legacy/rc_floor/check_slab_pdf.py
