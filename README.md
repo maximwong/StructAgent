@@ -13,7 +13,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 
 ## 在新设备上运行
 
-1. 克隆仓库：`git clone <仓库地址>`。
+1. 克隆仓库：`git clone https://github.com/maximwong/StructAgent.git`。
 2. 安装 Python 3.12 和 `legacy/rc_floor/requirements.txt` 中的依赖。
 3. Windows下运行 `legacy/rc_floor/启动.cmd`。CAD绘图需要本机安装AutoCAD并按现有流程加载 `legacy/rc_floor/RCFLOOR.lsp`。
 4. 在 `legacy/rc_floor/` 目录运行 `python -m unittest discover -s tests -p "test_*.py"` 检查无需CAD的回归测试。
@@ -25,5 +25,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 下一步按项目计划建立最小 `EngineeringTool`、`ToolResult`、`ToolRegistry`，再通过 Adapter 接入现有楼盖设计和CAD脚本。Agent Controller 只查询 Registry 和统一结果，不直接调用旧程序或 RFALL。新增墙、柱、基础等能力时沿用同一接口。
 
 请通过 Issue 记录任务，使用独立分支和 Pull Request 提交修改，在PR中说明影响范围、验证命令和结果。工程算法变更需要给出样例对比和必要的校核依据。参见 [协作指南](CONTRIBUTING.md)。
+
+当前 [v0.1-demo 里程碑](https://github.com/maximwong/StructAgent/milestone/1) 已列出[Tool Core](https://github.com/maximwong/StructAgent/issues/1)、[楼盖设计接入](https://github.com/maximwong/StructAgent/issues/2)、[CAD接入](https://github.com/maximwong/StructAgent/issues/3)、[一句话出图](https://github.com/maximwong/StructAgent/issues/4)和[稳定演示](https://github.com/maximwong/StructAgent/issues/5)的验收任务。
 
 本项目目前尚未选择开源许可证。公共可见不自动授予再发布或商用许可。
