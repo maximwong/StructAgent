@@ -1,0 +1,8 @@
+{
+  "source": "Frozen stage0.1 CAD scene and ASCII parameter files, not regenerated expectations",
+  "cases": {
+    "sample1": {"scene_sha256": "bc6381d81586d2a9aee9ebac949f3c1f91add5c0e49ab5afbd92816a9c3a1618", "data_sha256": "fa1c24b3a6dc2b96457edfd0ff4ccb52395ad64fc78925f97044874027fb71ae"},
+    "changed": {"scene_sha256": "238f924e6b4899d7ac7a2dd3acdf34547516207e145dd074814e3f1f4fe9c39b", "data_sha256": "d1ed19554ad83fab274fefb7c54c4cae5aa7a6c8fb3992da739eda2f51c0dbea"},
+    "demo_a": {"scene_sha256": "e6d4f2e9cb98329caa17815f819852b1589cce54870be427ad9b24735780f7e1", "data_sha256": "429f0531bb1dc8fb4e5ad000736b11f43da4205e122a473ef9ce9e0d8024c1a1"}
+  }
+}
