@@ -67,4 +67,4 @@ Registry对每个名称只保存一个版本，重复注册抛出 `ToolDefinitio
 
 ## 后续接入
 
-阶段2新增FloorDesignTool与FloorDesignAdapter，阶段3新增FloorCADTool与FloorCADAdapter。应用启动时注册实例即可，Registry不增加楼盖/墙/基础分支。未来自动发现插件可以复用相同注册接口。
+阶段2已通过FloorDesignTool与FloorDesignAdapter接入 `design_floor_system`，详见 [楼盖工具说明](floor-design-tool.md)。接入过程未修改Core。阶段3将新增FloorCADTool与FloorCADAdapter。应用启动时注册实例即可，Registry不增加楼盖/墙/基础分支。未来自动发现插件可以复用相同注册接口。

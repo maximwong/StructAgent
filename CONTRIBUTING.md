@@ -14,11 +14,14 @@ Windows PowerShell 示例：
 python -m pip install -r requirements-dev.txt
 python -m unittest discover -s tests -p 'test_*.py' -v
 python -m examples.dummy_tool
+python -m examples.floor_design
 cd legacy/rc_floor
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-以上从仓库根目录开始，前一套是Tool Core测试，后一套是旧程序87项回归。新Tool按照 [统一接口](docs/tool-core.md) 实现 `_execute`，由应用启动代码显式注册；通用核心不导入具体工程工具。
+以上从仓库根目录开始，前一套包含21项Tool Core测试和18项楼盖工具测试，后一套是旧程序87项回归。新Tool按照 [统一接口](docs/tool-core.md) 实现 `_execute`，由应用启动代码显式注册；通用核心不导入具体工程工具。
+
+楼盖基线指纹位于 `tests/fixtures/floor_baselines.json`，来自阶段0.1冻结成果，不由当前计算结果自动更新。设计结果变化时必须解释工程原因并提供对比，不能仅更新指纹使测试通过。当前三个案例在Windows/Python 3.12验证；新平台的数值差异应先调查。
 
 这些测试不代替AutoCAD实机验证。修改 `RCFLOOR.lsp` 或CAD调用链时，另用独立测试图纸检查插入、撤销、重做、Esc、异常清理和保存回读。
 
