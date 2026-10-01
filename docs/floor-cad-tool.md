@@ -1,10 +1,10 @@
 # 楼盖 CAD Tool
 
-`generate_floor_cad` 读取本项目成功计算的结果引用，通过 Adapter 复用现有 CAD 数据转换及 AutoLISP，创建独立图纸、保存 DWG、重新打开并核对。Tool Core 和旧程序不需要修改。
+`generate_floor_cad` 读取本项目成功计算的结果引用，通过 Adapter 复用现有 CAD 数据转换及 AutoLISP，创建独立图纸、保存 DWG、重新打开并核对。统一Tool接口与旧计算程序保持；旧LISP仅增加可选的本次取消文件检查。
 
 ## 运行环境与示例
 
-Windows、Python 3.12、桌面版 AutoCAD 2022；安装仓库的 `requirements-dev.txt`。先打开 AutoCAD 并处理启动/许可提示，使其处于空闲状态。脚本使用 Unicode AutoLISP 引擎；首次在设备上使用时按 AutoCAD 提示手动加载 `legacy/rc_floor/RCFLOOR.lsp`。工具不会修改 AutoCAD 的安全设置。
+Windows x64、Python 3.12.14、桌面版 AutoCAD 2022；按照 [固定部署说明](demo-deployment.md) 安装 `requirements-demo.txt`。先打开 AutoCAD 并处理启动/许可提示，使其处于空闲状态。脚本使用 Unicode AutoLISP 引擎；首次在设备上使用时按 AutoCAD 提示手动加载 `legacy/rc_floor/RCFLOOR.lsp`。工具不会修改 AutoCAD 的安全设置。
 
 ```powershell
 python -m examples.floor_cad
@@ -89,17 +89,30 @@ AutoCAD 此路径的 ActiveX `Measurement` 已包含标注比例，因此校验�
 | `cad_busy` | CAD 正在执行命令，或另一工具调用持有会话锁；完成当前操作后重试 |
 | `cad_unicode_required` | Unicode AutoLISP 引擎未启用；按旧脚本部署说明配置并重启 |
 | `cad_start_failed` | 桥接进程无法启动 |
-| `cad_timeout` | 等待/执行超过限时；先检查保留的 CAD 图纸和对话框，再重试 |
+| `cad_timeout` | 超过限时，归属图纸已恢复关闭；重新运行将创建独立新目录 |
+| `cad_cancelled` | 收到本次取消请求，失败不返回可交付附件 |
+| `cad_recovery_required` | 无法确认/恢复前次会话；阻止新出图，处理桌面状态后运行恢复命令 |
 | `cad_verification_failed` | 保存或实体/文字/尺寸核对失败，不返回可交付图纸 |
 | `cad_receipt_invalid` | 缺少回执、编号不符、桥接异常退出或图纸缺失 |
 | `cad_failed` | 其他绘图/桥接错误，保留具体信息 |
 
 每次运行保存 `run.json`、CAD日志和能够获取到的回执，失败时不返回成功 artifacts。运行文件、DWG和设计引用默认存于被 Git 忽略的 `data/projects/`。这些本地资料仍需自行保管。
 
-场景转换限时60秒；CAD默认240秒，可由应用配置为10–900秒；外围桥接额外保留45秒退出余量。超时只终止本次桥接进程，不杀掉 AutoCAD。已送入 AutoCAD 的命令可能仍在执行，必须检查后重试；自动取消、挂起会话恢复和崩溃后状态协调尚未实现。首次信任提示、许可、CAD挂起均不算成功。
+场景转换限时60秒；CAD默认240秒，可由应用配置为10–900秒；示例可传 `--cad-timeout`。CAD外围监控使用相同限时，超时终止本次桥接进程并请求协作取消，再执行最多12秒的归属恢复；前次会话恢复批次总预算15秒。它们是分别受限的步骤，不是整个设计→出图任务共用一个240秒预算。
+
+通用SQLite状态存于输出根目录下的 `cad/state.sqlite3`，独立于专业计算。全桌面工具会话日志在 `data/runtime/cad/`，跨输出根目录检查未结束调用。正常历史保留为CLOSED；Python进程退出/PID复用不会把旧RUNNING误当仍在执行或已完成。
+
+恢复匹配AutoCAD进程启动时间、图纸自定义运行标记及记录路径。图纸标记使用 [AutoCAD SummaryInfo API](https://help.autodesk.com/cloudhelp/2024/ENU/AutoCAD-ActiveX-Reference/files/GUID-A029FB49-B0DB-43E4-8888-698E1BF49878.htm)。无法确认归属的图纸不关闭；遗留桥接仅在进程启动时间、固定脚本、运行编号及目录均吻合时回收。不杀AutoCAD，不向用户命令发送Esc。
+
+```powershell
+python -m examples.cad_recovery
+python -m examples.cad_recovery --output-root "data/projects/演示工程"
+```
+
+失败恢复会保留RECOVERY_REQUIRED并阻止新出图；检查弹窗及桌面状态后重试恢复，不能删除未解决日志绕过保护。恢复成功只把中断运行记录为FAILED，随后显式重新运行出图。AutoCAD硬挂起、许可/信任提示及整机断电不是可自动保证恢复的场景，未完整验收项见 [技术债清单](technical-debt.md)。
 
 ## 验证范围
 
 自动测试运行真实设计及真实图元转换，CAD 后端用模拟回执验证失败边界，不代表桌面出图。`tests/fixtures/cad_baselines.json` 来自阶段0.1冻结文件，包含三案例完整图元 JSON 指纹与 ASCII 参数文件逐字节指纹。
 
-实机测试结果见 [阶段3报告](stages/phase-3.md)。CI 不安装 AutoCAD，也不会运行实际出图示例。
+实机测试结果见 [阶段3报告](stages/phase-3.md)及 [阶段3.1修复报告](stages/phase-3.1.md)。CI 不安装 AutoCAD，也不会运行实际出图示例。

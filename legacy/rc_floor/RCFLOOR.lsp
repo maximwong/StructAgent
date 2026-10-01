@@ -289,6 +289,9 @@
             ((= group "ENVELOPE") (list (+ (rf:planwidth) 8000.0) 13000.0))
             (T (list (+ (rf:planwidth) 8000.0) -3000.0))))))
         (foreach item (cdr entry)
+          ;; Optional adapter-owned cancellation; ordinary RFALL calls are unchanged.
+          (if (and (boundp '*rf:cancel-file*) *rf:cancel-file* (findfile *rf:cancel-file*))
+            (rf:fail "Drawing cancelled by its owning adapter"))
           (setq result (rf:entity item off))
           (if (not result) (rf:fail (strcat "Entity creation failed in " group)))
           (setq count (1+ count))))

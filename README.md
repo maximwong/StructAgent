@@ -2,14 +2,16 @@
 
 StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前已接入**阶段3：楼盖 CAD Tool / Adapter**，可通过Tool Registry完成 `design_floor_system` → `generate_floor_cad` 的无AI设计出图链路。Agent Controller和LLM解析尚未实现。
 
+阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
+
 ## 当前可用内容
 
 - `legacy/rc_floor/`：原有楼盖程序的独立修复版，保留板、次梁、主梁的连续计算及 RFLOAD/RFALL AutoLISP 命令。
 - `legacy/rc_floor/demo_a.json`：确认的6m×6m办公楼演示参数。梁纵筋HRB400，板筋与箍筋HPB300。
 - `legacy/rc_floor/tests/`：无需启动AutoCAD的计算、报告与CAD数据回归测试。
-- `core/`：EngineeringTool、ToolResult、ToolRegistry及统一校验。
+- `core/`：EngineeringTool、ToolResult、ToolRegistry、统一校验及通用持久执行状态。
 - `tools/floor/`：楼盖设计/CAD Tool、Adapter、隔离计算与数据转换进程、结果引用及已确认的Demo模板。
-- `examples/`、`tests/`：可运行示例、21项核心测试、18项楼盖设计测试和16项CAD工具测试。
+- `examples/`、`tests/`：可运行示例及75项核心、设计、CAD与持久状态测试，另有87项旧程序回归。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
 阶段0.1关闭了材料名称与强度不一致、布尔值参与工程数值计算、RFALL撤销组异常三项缺陷。原有80项加新增7项自动测试在本机通过。AutoCAD实机验收记录和图纸仅保留在原工作区本地，不包含在公共仓库中。
@@ -17,7 +19,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 ## 在新设备上运行
 
 1. 克隆仓库：`git clone https://github.com/maximwong/StructAgent.git`。
-2. 安装 Python 3.12，在仓库根目录执行 `python -m pip install -r requirements-dev.txt` 安装开发及旧程序依赖。
+2. 按 [固定部署说明](docs/demo-deployment.md) 创建Python 3.12.14独立环境，安装 `requirements-demo.txt` 并运行环境检查。后续示例中的 `python` 均指该环境的Python。
 3. Windows下运行 `legacy/rc_floor/启动.cmd`。CAD绘图需要本机安装AutoCAD并按现有流程加载 `legacy/rc_floor/RCFLOOR.lsp`。
 4. 在 `legacy/rc_floor/` 目录运行 `python -m unittest discover -s tests -p "test_*.py"` 检查无需CAD的回归测试。
 
@@ -56,6 +58,8 @@ python -m examples.floor_cad --case changed
 ```
 
 示例先计算并保存设计结果引用，再在全新图纸中绘制、保存和重开核对。完成后返回DWG路径；默认结果保存在被Git忽略的 `data/projects/`，重复执行使用不同目录。详见 [CAD工具说明](docs/floor-cad-tool.md) 和 [阶段3报告](docs/stages/phase-3.md)。AutoCAD未开启、忙碌或验证失败时返回错误，不把残留文件视为成功。
+
+中断后运行 `python -m examples.cad_recovery`；自定义输出根目录时同时传 `--output-root`。恢复只处理有归属证据的工具会话，恢复失败会阻止下一次出图。不要删除会话日志绕过保护。
 
 ## 协作方向
 

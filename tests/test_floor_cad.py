@@ -79,7 +79,7 @@ class FloorCADTests(unittest.TestCase):
         self.assertNotEqual(results[0].artifacts[0]["path"], results[1].artifacts[0]["path"])
         for result in results:
             self.assertTrue(Path(result.artifacts[0]["path"]).is_file())
-            self.assertEqual(json.loads((Path(result.metadata["run_directory"]) / "run.json").read_text())["state"], "COMPLETED")
+            self.assertEqual(json.loads((Path(result.metadata["run_directory"]) / "run.json").read_text(encoding="utf-8"))["state"], "COMPLETED")
 
     def test_reference_never_accepts_paths_or_unknown_ids(self):
         for ref in ("../private.json", "C:/private.json", "floor-" + "a"*32, True):
@@ -129,7 +129,7 @@ class FloorCADTests(unittest.TestCase):
         result = self.tool.execute(self.request())
         self.assertFalse(result.success);self.assertEqual(result.artifacts, [])
         self.assertEqual(result.errors[0]["code"], "cad_busy")
-        manifest = json.loads((Path(result.metadata["run_directory"]) / "run.json").read_text())
+        manifest = json.loads((Path(result.metadata["run_directory"]) / "run.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["state"], "FAILED")
 
     def test_invalid_success_receipts_or_missing_drawings_never_pass(self):
@@ -176,7 +176,7 @@ class FloorCADTests(unittest.TestCase):
         self.adapter.backend.execute.side_effect = RuntimeError("Unexpected failure")
         result = self.tool.execute(self.request())
         self.assertFalse(result.success)
-        manifest = json.loads((Path(result.metadata["run_directory"]) / "run.json").read_text())
+        manifest = json.loads((Path(result.metadata["run_directory"]) / "run.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["state"], "FAILED")
 
     def test_cad_cleanup_warning_is_preserved_with_verified_success(self):
@@ -192,24 +192,24 @@ class FloorCADTests(unittest.TestCase):
 
     @unittest.skipUnless(__import__("os").name == "nt", "Windows bridge contract")
     def test_bridge_timeout_and_missing_receipt_do_not_report_success(self):
-        self.root.mkdir(parents=True)
+        self.root.mkdir(parents=True, exist_ok=True)
         for index, outcome in enumerate((subprocess.TimeoutExpired("bridge", 100), OSError("missing"),
                                          SimpleNamespace(returncode=1))):
             run = self.root / str(index);run.mkdir()
             kwargs = {"side_effect": outcome} if isinstance(outcome, Exception) else {"return_value": outcome}
             with patch("tools.floor.cad_adapter.subprocess.run", **kwargs):
                 with self.assertRaises(FloorCADError):
-                    AutoCADBackend().execute(run, "a"*32, 60)
+                    AutoCADBackend(run / "sessions").execute(run, "a"*32, 60)
 
     @unittest.skipUnless(__import__("os").name == "nt", "Windows bridge contract")
     def test_bridge_run_token_and_exit_code_are_both_required(self):
-        self.root.mkdir(parents=True)
+        self.root.mkdir(parents=True, exist_ok=True)
         for index, (code, token, state) in enumerate(((0, "old", "SUCCESS"), (1, "a"*32, "SUCCESS"), (0, "a"*32, "FAILED"))):
             run = self.root / str(index);run.mkdir()
             (run / "cad_receipt.json").write_text(json.dumps({"run_id": token, "state": state}), encoding="utf-8")
             with patch("tools.floor.cad_adapter.subprocess.run", return_value=SimpleNamespace(returncode=code)):
                 with self.assertRaises(FloorCADError):
-                    AutoCADBackend().execute(run, "a"*32, 60)
+                    AutoCADBackend(run / "sessions").execute(run, "a"*32, 60)
 
 
 if __name__ == "__main__":

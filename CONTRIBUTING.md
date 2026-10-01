@@ -11,7 +11,9 @@ PR说明请包括：触发问题、修改后的行为、变更文件、测试命
 Windows PowerShell 示例：
 
 ```powershell
-python -m pip install -r requirements-dev.txt
+python -m pip install -r requirements-demo.txt
+python -m pip check
+python -m examples.environment_check
 python -m unittest discover -s tests -p 'test_*.py' -v
 python -m examples.dummy_tool
 python -m examples.floor_design
@@ -19,7 +21,7 @@ cd legacy/rc_floor
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-以上从仓库根目录开始，前一套包含21项Tool Core测试、18项楼盖设计测试和16项CAD工具测试，后一套是旧程序87项回归，共142项。CAD自动测试使用真实设计和数据转换，但桌面后端为模拟；不能把它写成AutoCAD出图通过。新Tool按照 [统一接口](docs/tool-core.md) 实现 `_execute`，由应用启动代码显式注册；通用核心不导入具体工程工具。
+以上从仓库根目录开始，使用 [固定独立Python环境](docs/demo-deployment.md)。前一套75项，后一套87项，共162项。CAD自动测试使用真实设计和数据转换，绘图后端为模拟；部分边界测试启动真实PowerShell辅助进程，但不操作桌面CAD，不能把它写成AutoCAD出图通过。新Tool按照 [统一接口](docs/tool-core.md) 实现 `_execute`，由应用启动代码显式注册；通用核心不导入具体工程工具。
 
 楼盖基线指纹位于 `tests/fixtures/floor_baselines.json`，来自阶段0.1冻结成果，不由当前计算结果自动更新。设计结果变化时必须解释工程原因并提供对比，不能仅更新指纹使测试通过。当前三个案例在Windows/Python 3.12验证；新平台的数值差异应先调查。
 
