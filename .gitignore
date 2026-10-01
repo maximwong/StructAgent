@@ -20,6 +20,7 @@ venv/
 
 # Generated engineering outputs and local acceptance evidence
 verification/
+data/projects/
 **/STATUS.json
 **/设计说明书.docx
 **/设计说明书.pdf
