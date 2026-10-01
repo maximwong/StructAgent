@@ -1,0 +1,20 @@
+{
+  "source": "Frozen stage0.1 verification outputs; legacy source preserved by initial Git commit f47c8fe. Canonical JSON: ensure_ascii=False, sort_keys=True, allow_nan=False, default separators.",
+  "cases": {
+    "sample1": {
+      "result_sha256": "89128dedcbbe9ee9078f83a7bc95f4560ffaa50c394f2751adda841426001465",
+      "bars_sha256": "d69211b055b722af5614b7669a3e099bb26c051c93498353271d4c0630944f20",
+      "bar_count": 30
+    },
+    "changed": {
+      "result_sha256": "7f63df451462cc55b91c26a142a7070183b116fc0d2b55ddd7a0e18d0b1cfcec",
+      "bars_sha256": "ab5f30789bbb7185a02171a08e5b52ccaee4a7aea9d89c2d75dfdf55b22f0ead",
+      "bar_count": 30
+    },
+    "demo_a": {
+      "result_sha256": "2df9a0a4039145d7eeed5b48f71d1aa9fd9375122dd5fa5b46fc5edc32971bf4",
+      "bars_sha256": "6a92e6a4d1f359c0f166937b921e9400cbae7d08beb4f238f450f52e8542fdd6",
+      "bar_count": 30
+    }
+  }
+}
