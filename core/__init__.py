@@ -4,8 +4,9 @@ from .exceptions import ToolDefinitionError, ToolNotFoundError, ToolValidationEr
 from .tool_base import EngineeringTool
 from .tool_registry import ToolRegistry
 from .tool_result import ToolResult
+from .project_state import ProjectStateStore
 
 __all__ = [
-    "EngineeringTool", "ToolRegistry", "ToolResult",
+    "EngineeringTool", "ToolRegistry", "ToolResult", "ProjectStateStore",
     "ToolDefinitionError", "ToolNotFoundError", "ToolValidationError",
 ]

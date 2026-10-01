@@ -17,11 +17,12 @@ def main():
     parser = argparse.ArgumentParser(description="Design a floor and generate an independently verified CAD drawing.")
     parser.add_argument("--case", choices=("demo_a", "sample1", "changed"), default="demo_a")
     parser.add_argument("--output-root", type=Path, default=Path(__file__).resolve().parents[1] / "data/projects")
+    parser.add_argument("--cad-timeout", type=float, default=240, help="CAD execution budget in seconds (10–900).")
     args = parser.parse_args()
     registry = ToolRegistry()
     store = FloorDesignStore(args.output_root / "designs")
     registry.register(FloorDesignTool())
-    registry.register(FloorCADTool(store, FloorCADAdapter(args.output_root / "cad")))
+    registry.register(FloorCADTool(store, FloorCADAdapter(args.output_root / "cad", timeout_seconds=args.cad_timeout)))
     model = json.loads((Path(__file__).resolve().parents[1] / "legacy/rc_floor" / (args.case + ".json")).read_text(encoding="utf-8-sig"))
     envelope = {"project_id": "CSU-DEMO-001", "tool": "design_floor_system",
                 "context": {"unit_system": "SI", "design_code": "GB"},

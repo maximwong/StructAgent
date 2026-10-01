@@ -6,6 +6,7 @@ import re
 from uuid import uuid4
 
 from core import ToolResult
+from core.persistence import write_json
 from core.validation import make_validator, validate_json
 from .design_adapter import canonical_hash
 from .schemas import OUTPUT_SCHEMA
@@ -43,10 +44,7 @@ class FloorDesignStore:
         self._check(data, project)
         ref = "floor-" + uuid4().hex
         self.root.mkdir(parents=True, exist_ok=True)
-        # Exclusive creation: references are never reused or overwritten.
-        with (self.root / (ref + ".json")).open("x", encoding="utf-8") as stream:
-            json.dump({"checksum": canonical_hash(data), "design": data}, stream,
-                      ensure_ascii=False, allow_nan=False)
+        write_json(self.root / (ref + ".json"), {"checksum": canonical_hash(data), "design": data}, exclusive=True)
         return ref
 
     def load(self, reference: str, *, project_id: str) -> ToolResult:

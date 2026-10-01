@@ -1,0 +1,13 @@
+# Tested demo baseline: CPython 3.12.14, Windows x64 / AutoCAD 2022.
+# Includes all runtime transitive dependencies; no inherited bundled packages.
+attrs==26.1.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+referencing==0.37.0
+rpds-py==2026.6.3
+typing_extensions==4.16.0
+python-docx==1.2.0
+lxml==6.1.1
+Pillow==12.3.0
+pypdf==6.10.0
+pypdfium2==5.13.0
