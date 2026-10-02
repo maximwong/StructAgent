@@ -18,9 +18,10 @@ def digest(path):
 class ArtifactArchive:
     def __init__(self, project_root):
         self.root = Path(project_root).resolve()
-        if not (self.root / "agent/state.sqlite3").is_file():
+        database = self._path("agent/state.sqlite3")
+        if not database.is_file():
             raise ValueError("Existing workflow state is required.")
-        self.state = ProjectStateStore(self.root / "agent/state.sqlite3")
+        self.state = ProjectStateStore(database)
         self.archives = self.root / "archives"
 
     def _path(self, relative):
@@ -32,6 +33,19 @@ class ArtifactArchive:
                 for p in (path, *path.parents) if p != self.root and p.is_relative_to(self.root)):
             raise ValueError("Artifact paths must stay inside the project without links.")
         return path
+
+    def _owned_absolute(self, value):
+        candidate = Path(value)
+        if not candidate.is_absolute():
+            raise ValueError("Artifact metadata requires an absolute path.")
+        resolved = candidate.resolve()  # Windows may report the same path using an 8.3 alias.
+        relative = resolved.relative_to(self.root).as_posix()
+        for ancestor in (candidate, *candidate.parents):
+            if ancestor.resolve() == self.root:
+                break
+            if ancestor.is_symlink() or ancestor.is_junction():
+                raise ValueError("Artifact paths must not use links.")
+        return self._path(relative)
 
     def _terminal(self, run_id):
         if not isinstance(run_id, str) or re.fullmatch(r"[0-9a-f]{32}", run_id) is None:
@@ -47,37 +61,29 @@ class ArtifactArchive:
         directories = [self._path("agent/" + run_id)]
         for call in record["metadata"]["tool_calls"]:
             result_path = self._path("agent/" + run_id + "/" + call["step"] + ".json")
-            if Path(call["result_path"]).resolve() != result_path:
+            if self._owned_absolute(call["result_path"]) != result_path:
                 raise ValueError("Result ownership differs from the workflow.")
             result = json.loads(result_path.read_text(encoding="utf-8"))
             metadata = result.get("metadata", {})
             if not metadata.get("run_directory"):
                 continue
-            candidate = Path(metadata["run_directory"])
-            directory = candidate.resolve()  # Windows may report the same directory using an 8.3 alias.
-            relative = directory.relative_to(self.root).as_posix()
-            for ancestor in (candidate, *candidate.parents):
-                if ancestor.resolve() == self.root:
-                    break
-                if ancestor.is_symlink() or ancestor.is_junction():
-                    raise ValueError("Artifact paths must not use links.")
-            directory = self._path(relative)
+            directory = self._owned_absolute(metadata["run_directory"])
             tool_run = metadata.get("run_id")
             if directory.name != tool_run or not re.fullmatch(r"[0-9a-f]{32}", tool_run or ""):
                 raise ValueError("Tool directory ownership is missing.")
-            store_path = directory.parent / "state.sqlite3"
+            store_path = self._owned_absolute(directory.parent / "state.sqlite3")
             if not store_path.is_file():
                 raise ValueError("Tool state is missing; retain the diagnostics.")
             tool_record = ProjectStateStore(store_path).get(tool_run)
             if (tool_record["project_id"] != record["project_id"] or tool_record["tool"] != call["tool"]
                     or tool_record["state"] not in ("COMPLETED", "FAILED", "INTERRUPTED")
-                    or Path(tool_record["metadata"].get("run_directory", "")).resolve() != directory):
+                    or self._owned_absolute(tool_record["metadata"].get("run_directory", "")) != directory):
                 raise ValueError("Tool state is unresolved or has another owner.")
             if metadata.get("external_started") or tool_record["metadata"].get("external_started"):
                 closed = False
                 for artifact in result.get("artifacts", []):
                     if artifact.get("type") == "verification":
-                        receipt = self._path(Path(artifact["path"]).relative_to(self.root).as_posix())
+                        receipt = self._owned_absolute(artifact["path"])
                         data = json.loads(receipt.read_text(encoding="utf-8-sig"))
                         closed |= data.get("run_id") == tool_run and data.get("owned_document_closed") is True
                 if not closed:

@@ -1,4 +1,6 @@
 import json
+import ctypes
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -15,6 +17,10 @@ class ArchiveTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory(prefix="archive_中文_")
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
+        if os.name == "nt":
+            buffer = ctypes.create_unicode_buffer(32768)
+            if ctypes.windll.kernel32.GetShortPathNameW(str(self.root), buffer, len(buffer)):
+                self.root = Path(buffer.value)  # Exercise actual Windows aliases for both directories and receipts.
         self.state = AgentState(self.root / "agent")
         self.snapshot = self.state.begin("p")
         self.run_id = self.snapshot["run_id"]
