@@ -87,6 +87,27 @@ class ControllerTests(unittest.TestCase):
         self.second.handler.side_effect = draw
         self.assertTrue(self.run_workflow()["success"])
 
+    def test_warning_summary_deduplicates_but_raw_results_preserve_warnings(self):
+        self.first.handler.side_effect = lambda d: ToolResult(True, self.first.name, "1.0", result={"value": 6}, warnings=["review"])
+        self.second.handler.side_effect = lambda d: ToolResult(True, self.second.name, "1.0", result={"value": 6}, warnings=["review"])
+        result = self.run_workflow()
+        self.assertEqual(result["warnings"], ["review"])
+        for call in result["tool_calls"]:
+            self.assertEqual(json.loads(Path(call["result_path"]).read_text())["warnings"], ["review"])
+
+    def test_dead_owner_updates_tool_call_and_known_recovery_does_not_invent_crash(self):
+        snapshot = self.state.begin("p")
+        snapshot["tool_calls"] = [{"status": "running"}]
+        self.state.save(snapshot)
+        with patch("core.project_state.process_identity", return_value="missing"):
+            queried = self.state.get(snapshot["run_id"])
+        self.assertEqual(queried["tool_calls"][0]["status"], "interrupted")
+        self.assertEqual(queried["errors"][-1]["code"], "owner_exited")
+        known = self.state.begin("p")
+        known["errors"] = [{"code": "cad_recovery_required"}]
+        self.state.save(known, "RECOVERY_REQUIRED")
+        self.assertEqual(self.state.get(known["run_id"])["errors"], known["errors"])
+
     def test_parse_failure_or_missing_parameters_never_calls_tools(self):
         for status in ("needs_input", "invalid_input", "invalid_output", "error"):
             self.parser.parse.return_value = ParseResult(status, errors=[{"code": "missing", "message": "Missing input", "path": []}], missing_fields=["load"])

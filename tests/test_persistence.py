@@ -29,6 +29,19 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(json.loads(path.read_text()), {"state": "old"})
         self.assertEqual(list(self.root.glob(".pending-*")), [])
 
+    def test_indexed_lookup_and_reconciliation_ignore_terminal_history(self):
+        store = ProjectStateStore(self.root / "state.sqlite3")
+        store.begin("done", "p", "tool", {})
+        store.update("done", "COMPLETED", {})
+        store.begin("live", "p", "tool", {})
+        self.assertEqual(store.get("done")["state"], "COMPLETED")
+        self.assertEqual([r["run_id"] for r in store.list_runs("p", state="RUNNING")], ["live"])
+        with patch("core.project_state.process_identity", return_value="unknown") as identity:
+            store.reconcile()
+            self.assertEqual(identity.call_count, 1)
+        with self.assertRaises(KeyError):
+            store.get("missing")
+
     def test_immutable_publication_never_overwrites_existing_reference(self):
         path = self.root / "snapshot.json"
         write_json(path, {"version": 1}, exclusive=True)

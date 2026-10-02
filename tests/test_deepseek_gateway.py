@@ -73,6 +73,28 @@ class GatewayTests(unittest.TestCase):
         return SimpleNamespace(returncode=0, stdout=json.dumps(data).encode(), stderr=b"never print stderr")
 
     @patch("llm.gateway.subprocess.run")
+    def test_timeout_stage_is_safe_and_preserved(self, run):
+        run.side_effect = subprocess.TimeoutExpired("worker", 2, stderr=b'{"stage":"opening_response"}\n{"stage":"reading_body"}\n')
+        with self.assertRaises(GatewayError) as context:
+            self.gateway.complete(PAYLOAD["messages"])
+        self.assertEqual(context.exception.metadata["request_stage"], "reading_body")
+        self.assertGreaterEqual(context.exception.metadata["elapsed_seconds"], 0)
+        self.assertNotIn(KEY, json.dumps(context.exception.metadata))
+
+    @patch("llm.gateway.subprocess.run")
+    def test_malformed_diagnostic_and_untrusted_metadata_are_filtered(self, run):
+        run.side_effect = subprocess.TimeoutExpired("worker", 2, stderr='{"stage":[]}\n' + KEY)
+        with self.assertRaises(GatewayError) as context:
+            self.gateway.complete(PAYLOAD["messages"])
+        self.assertEqual(context.exception.metadata["request_stage"], "worker")
+        run.side_effect = None
+        run.return_value = self.response({"content": "{}", "metadata": {"request_stage": [], "secret": KEY,
+            "usage": {"prompt_tokens": True, "total_tokens": 3, "secret": KEY}}})
+        _, metadata = self.gateway.complete(PAYLOAD["messages"])
+        self.assertEqual(metadata["usage"], {"total_tokens": 3})
+        self.assertNotIn(KEY, json.dumps(metadata))
+
+    @patch("llm.gateway.subprocess.run")
     def test_worker_protocol_and_key_only_on_stdin(self, run):
         run.return_value = self.response({"content": '{"ok":true}', "metadata": {"model": "deepseek-flash"}})
         parsed, metadata = self.gateway.complete(PAYLOAD["messages"])
@@ -125,6 +147,19 @@ class GatewayTests(unittest.TestCase):
 
 
 class WorkerHttpTests(unittest.TestCase):
+    def setUp(self):
+        self.diagnostics = io.StringIO()
+        patcher = patch("llm._deepseek_worker.sys.stderr", self.diagnostics)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    @patch("llm._deepseek_worker.urllib.request.build_opener")
+    def test_wrapped_socket_timeout_is_not_connection_failure(self, build):
+        build.return_value.open.side_effect = urllib.error.URLError(TimeoutError(KEY))
+        reply = worker.request_completion(PAYLOAD)
+        self.assertEqual(reply["error"]["code"], "api_timeout")
+        self.assertEqual(reply["metadata"]["request_stage"], "opening_response")
+        self.assertNotIn(KEY, self.diagnostics.getvalue())
     def open_response(self, data):
         stream = io.BytesIO(json.dumps(data).encode())
         opener = Mock()

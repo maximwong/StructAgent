@@ -6,7 +6,7 @@
 
 ```powershell
 python -m venv .venv-demo
-.venv-demo/Scripts/python.exe -m pip install -r requirements-demo.txt
+.venv-demo/Scripts/python.exe -m pip install --only-binary=:all: --require-hashes -r requirements-demo.lock
 .venv-demo/Scripts/python.exe -m pip check
 .venv-demo/Scripts/python.exe -m examples.environment_check
 .venv-demo/Scripts/python.exe -m unittest discover -s tests -p 'test_*.py'
@@ -20,11 +20,11 @@ python -m venv .venv-demo
 python -m pip install uv==0.12.21
 uv python install 3.12.14
 uv venv --seed --python 3.12.14 .venv-demo
-.venv-demo/Scripts/python.exe -m pip install -r requirements-demo.txt
+.venv-demo/Scripts/python.exe -m pip install --only-binary=:all: --require-hashes -r requirements-demo.lock
 .venv-demo/Scripts/python.exe -m examples.environment_check
 ```
 
-uv 使用 Astral 的 Python 独立构建；这与 `actions/setup-python` 的 Windows 构建来源不同。本仓库 CI 固定 uv 安装器及 Python 版本，并在新环境运行同样的检查和回归。安装方式依据 [uv 官方 GitHub Actions 文档](https://docs.astral.sh/uv/guides/integration/github/) 和 [Python 版本文档](https://docs.astral.sh/uv/concepts/python-versions/)。这里固定的是版本；离线安装包归档与制品哈希锁仍待 Demo 冻结阶段完善。
+uv 使用 Astral 的 Python 独立构建；这与 `actions/setup-python` 的 Windows 构建来源不同。本仓库 CI 固定 uv 安装器及 Python 版本，并在新环境运行同样的检查和回归。安装方式依据 [uv 官方 GitHub Actions 文档](https://docs.astral.sh/uv/guides/integration/github/) 和 [Python 版本文档](https://docs.astral.sh/uv/concepts/python-versions/)。阶段5.1已补充依赖SHA256锁、运行时归档及离线安装器，见 [离线部署说明](offline-deployment.md)；阶段8仍需完成正式版本发布与冻结。
 
 旧 GUI 仍可使用原启动方式。需要确保使用本次独立环境时，执行 `.venv-demo/Scripts/python.exe legacy/rc_floor/app.py` 前先查阅旧入口说明；工具示例直接使用上述 Python 的绝对/相对可执行路径，避免启动器选择其他运行时。
 

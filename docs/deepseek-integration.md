@@ -72,6 +72,10 @@ python -m examples.parse_request --template office_floor_demo_v1 --text "设计�
 
 API错误包括 `api_authentication_failed`、`api_balance_insufficient`、`api_rate_limited`、`api_unavailable`、`api_connection_failed`、`api_timeout`、`api_incomplete_response` 和 `api_invalid_json`。整个请求由独立进程执行，超时终止并等待该HTTP工作进程；不涉及AutoCAD。无自动重试，避免重复计费或无限等待。
 
+阶段5.1的安全诊断附在ParseResult.metadata：model、elapsed_seconds、request_stage及已收到的http_status/数值usage。请求阶段为opening_response、reading_body、decoding_response或completed；没有阶段消息时为worker。总时限中断也保留最后阶段。诊断不包含请求头、密钥、原始响应或未知元数据；opening_response不区分DNS/TLS/云服务等待，不能凭它认定外部故障根因。URLError封装的socket超时同样返回api_timeout。
+
+已确认的“板筋及箍筋保留HPB300”可以通过；混凝土与钢筋等级写反时返回material_assignment_conflict，不调用API。
+
 ## 扩展与验证
 
 通用 `ParameterParser` 只依赖Registry、工具描述/输入校验、Gateway和 `LanguageProfile`。工程插件提供字段Schema、固定参数、context及 `inspect(text)` 来源检查。组合入口注册新工具和新profile即可；解析器不导入专业Adapter/旧引擎，也不按floor/wall/foundation写分支。第二个测试查询工具已验证注册后可解析，不修改通用解析器。

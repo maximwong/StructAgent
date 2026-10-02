@@ -81,6 +81,15 @@ class FloorIntegrationTests(unittest.TestCase):
         self.assertEqual(result.metadata["template_id"], "office_floor_demo_v1")
         self.assertEqual(result.result["effective_input"], model())
 
+    def test_integer_and_float_template_loads_preserve_complete_baseline(self):
+        data = request()
+        data["parameters"]["live_load"] = 2
+        result = self.tool.execute(data)
+        self.assertTrue(result.success, result.errors)
+        self.assertEqual(result.metadata["legacy_result_sha256"], BASELINES["demo_a"]["result_sha256"])
+        self.assertEqual(result.result["legacy_result"], self.results["demo_a"].result["legacy_result"])
+        self.assertIsInstance(result.result["effective_input"]["loads"]["live_kN_m2"], float)
+
     def test_engine_import_names_do_not_leak_or_collide(self):
         original_path = sys.path[:]
         fake = ModuleType("engine")
