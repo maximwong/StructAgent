@@ -35,11 +35,14 @@ class FloorCADTool(EngineeringTool):
         try:
             design = self.store.load(reference, project_id=data["project_id"])
         except DesignReferenceError as exc:
-            return ToolResult.failure(self.name, self.version, "invalid_design_reference", str(exc),
-                                      ("parameters", "design_result_ref"))
+            return ToolResult(False, self.name, self.version,
+                              errors=[{"code": "invalid_design_reference", "message": str(exc),
+                                       "path": ["parameters", "design_result_ref"]}],
+                              metadata={"recovery_required": False})
         try:
             return ToolResult(True, self.name, self.version, **self.adapter.generate(design, reference=reference))
         except FloorCADError as exc:
             return ToolResult(False, self.name, self.version,
                               errors=[{"code": exc.code, "message": str(exc), "path": []}],
-                              metadata={"run_directory": exc.run_dir})
+                              metadata={"run_directory": exc.run_dir,
+                                        "recovery_required": exc.code == "cad_recovery_required"})
