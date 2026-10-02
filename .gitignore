@@ -14,12 +14,15 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .venv/
+.venv-demo/
 venv/
 .idea/
 .vscode/
 
 # Generated engineering outputs and local acceptance evidence
 verification/
+data/projects/
+data/runtime/
 **/STATUS.json
 **/设计说明书.docx
 **/设计说明书.pdf

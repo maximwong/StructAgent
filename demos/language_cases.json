@@ -1,0 +1,16 @@
+{
+  "cases": [
+    {"id": "colloquial", "text": "来一个6m×6m柱网的办公楼单向板肋梁楼盖，采用C30和HRB400，活荷载2.8kN/m²。", "status": "ready", "parameters": {"span_x": 6000, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.8}},
+    {"id": "separate_axes", "text": "麻烦帮我算一下办公楼的楼盖。主梁方向跨6米，次梁方向也是6米，混凝土C30，梁纵筋用HRB400；活载按每平方米2.8千牛考虑，板筋和箍筋仍用HPB300。", "status": "ready", "parameters": {"span_x": 6000, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.8}},
+    {"id": "chinese_numbers", "text": "想请你做一个办公楼单向板肋梁楼盖，柱网六米乘六米，混凝土C30，梁纵筋HRB400，活荷载二点八千牛每平方米，谢谢。", "status": "ready", "parameters": {"span_x": 6000, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.8}},
+    {"id": "english", "text": "Please design an office one-way ribbed floor. Grid: 6 metres by 6 metres. Concrete C30, beam longitudinal reinforcement HRB400; live load 2.8 kN per square metre. Thanks!", "status": "ready", "parameters": {"span_x": 6000, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.8}},
+    {"id": "reordered", "text": "活荷载就按3.0kPa吧，梁纵筋HRB400、混凝土C35。办公楼的柱网是5400mm×6000mm，帮我出一下单向板肋梁楼盖图。", "status": "ready", "parameters": {"span_x": 5400, "span_y": 6000, "concrete": "C35", "steel": "HRB400", "live_load": 3.0}},
+    {"id": "polite_negation", "text": "不用解释得太复杂，麻烦帮我把图做好。办公楼单向板肋梁楼盖，6m×6m柱网，C30，HRB400，活荷载2.8kN/m²，谢谢你。", "status": "ready", "parameters": {"span_x": 6000, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.8}},
+    {"id": "multiline", "text": "我想做办公楼楼盖。\n柱网：6×6m\n混凝土：C30\n梁纵筋：HRB400\n活载：2.8kPa\n请按已经选好的模板出图。", "status": "ready", "parameters": {"span_x": 6000, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.8}},
+    {"id": "shared_chinese_unit", "text": "能帮我做个楼盖吗？办公用，柱网六乘六米，C30混凝土、HRB400梁纵筋，活载二点八千牛每平方米。", "status": "ready", "parameters": {"span_x": 6000, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.8}},
+    {"id": "missing_load", "text": "帮忙做办公楼楼盖，柱网六米乘六米，混凝土C30，梁纵筋HRB400。", "status": "needs_input", "missing_fields": ["live_load"]},
+    {"id": "conflicting_loads", "text": "办公楼楼盖6m×6m，C30，HRB400，活荷载2.0kN/m²，同时要求活荷载3.0kN/m²。", "status": "needs_input", "error": "ambiguous_parameter"},
+    {"id": "changed_thickness", "text": "帮我做6m×6m的办公楼楼盖，C30，HRB400，活荷载2.8kN/m²，另外板厚改成100毫米。", "status": "needs_input", "error": "outside_template_scope"},
+    {"id": "unclear_unit", "text": "办公室楼盖6m×6m，C30，梁筋HRB400，活荷载填2.8，帮我设计。", "status": "needs_input", "missing_fields": ["live_load"]}
+  ]
+}
