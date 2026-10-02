@@ -10,7 +10,7 @@ Demo使用已明确选择的 `office_floor_demo_v1`：梁纵筋HRB400、板筋/�
 
 入口通过Controller与Registry依次完成解析、输入校验、完整楼盖设计、CAD生成。只有本次DWG保存、重开与场景核验成功才显示completed，返回的artifacts给出DWG和回执路径。默认文件位于Git忽略的 `data/projects/`，每次使用独立运行编号。
 
-这是命令行Demo；最简UI与“打开CAD”按钮属于阶段7。本阶段不修改旧GUI、工程计算或AutoLISP。
+这是命令行Demo。阶段7已提供最简UI及“打开CAD”按钮；双击根目录`启动StructAgent.cmd`即可输入设计内容，无需PowerShell命令，见[界面说明](demo-ui.md)。旧GUI、工程计算和AutoLISP继续保持原行为。
 
 阶段6.1已移除措辞白名单：也可说“麻烦帮我算一下……活载按每平方米2.8千牛考虑”，或换序、换行、中英文及中文数字。原文值和单位仍必须明确，缺参或工程要求超出已选模板时返回具体澄清。`python -m examples.language_acceptance` 可单独实测12项语言/澄清案例，不执行设计或CAD，详见 [阶段6.1报告](stages/phase-6.1.md)。当前完整批次的缺参/C50探针也会先调用模型，正式两轮带超时探针共10次API调用；旧报告中的8次是旧解析流程的历史实测结果。
 
