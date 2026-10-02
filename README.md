@@ -1,6 +1,6 @@
 # StructAgent
 
-StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前已完成**阶段4：DeepSeek自然语言参数解析**，可将已明确选择Demo模板的输入解析为经过本地校验的Tool Envelope。原有Tool Registry的 `design_floor_system` → `generate_floor_cad` 无AI设计出图链路继续可用。自动串联解析、设计和CAD的Agent Controller将在阶段5实现。
+StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前已完成**阶段5：Engineering Agent Controller**，在显式选择Demo模板后，通过Registry串联自然语言解析、楼盖设计、CAD生成与持久状态。真实DeepSeek → Controller → AutoCAD链路已完成一次保存重开验证；后续继续进行阶段6的重复演示验收。
 
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
@@ -12,7 +12,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 - `core/`：EngineeringTool、ToolResult、ToolRegistry、统一校验及通用持久执行状态。
 - `tools/floor/`：楼盖设计/CAD Tool、Adapter、隔离计算与数据转换进程、结果引用及已确认的Demo模板。
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
-- `examples/`、`tests/`：可运行示例及103项核心、设计、CAD、状态与解析测试，另有87项旧程序回归。
+- `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态。
+- `examples/`、`tests/`：可运行示例及130项核心、设计、CAD、状态、解析与Controller测试，另有87项旧程序回归。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
 阶段0.1关闭了材料名称与强度不一致、布尔值参与工程数值计算、RFALL撤销组异常三项缺陷。原有80项加新增7项自动测试在本机通过。AutoCAD实机验收记录和图纸仅保留在原工作区本地，不包含在公共仓库中。
@@ -72,9 +73,21 @@ python -m examples.parse_request --template office_floor_demo_v1 --text "设计�
 
 输出 `ready` 表示参数提取及输入契约校验通过，包含后续工具可使用的Envelope；此命令仅解析。缺项、歧义、模板外要求、模型JSON错误或API失败会返回对应状态，禁止带着失败结果继续设计。输入顺序为主梁轴跨×次梁轴跨，梁纵筋HRB400、板筋和箍筋HPB300。当前使用明确限定的中文Demo表达范围；使用方法、模板限制和扩展接口见 [DeepSeek接入说明](docs/deepseek-integration.md)，验收见 [阶段4报告](docs/stages/phase-4.md)。
 
+## 通过Controller自动完成设计与CAD
+
+完成本机API与CAD部署，打开空闲的AutoCAD 2022后运行：
+
+```powershell
+python -m examples.agent_workflow --template office_floor_demo_v1 --text "设计一个6m×6m柱网的办公楼单向板肋梁楼盖，采用C30和HRB400，活荷载2.0kN/m²。"
+```
+
+该命令会实际创建独立图纸，自动执行解析、设计及CAD工具。成功返回 `status: completed`，三步均completed，并给出DWG路径。缺参、接口错误、设计拒绝或CAD失败会停止后续步骤。通过返回的run_id运行 `python -m examples.agent_workflow --status <run_id>` 可查看持久状态，不再调用API/CAD。
+
+每次运行使用独立结果目录；Controller没有楼盖脚本导入或CAD命令。工作流配置、失败恢复及扩展方法见 [Controller说明](docs/agent-controller.md)，实机证据与范围见 [阶段5报告](docs/stages/phase-5.md)。
+
 ## 协作方向
 
-下一步为阶段5：建立Agent Controller，使其只查询Registry和统一结果，将经过校验的解析结果串联到设计及CAD工具，不直接调用旧程序或CAD命令。新增墙、柱、基础等能力时沿用同一接口。
+下一步为阶段6：固定“一句话出图”演示入口与案例，连续验证真实LLM、Controller及CAD链路。Controller只依赖Registry、Schema、ToolResult和Project State；新增专业能力通过注册工具、语言配置及工作流接入。
 
 请通过 Issue 记录任务，使用独立分支和 Pull Request 提交修改，在PR中说明影响范围、验证命令和结果。工程算法变更需要给出样例对比和必要的校核依据。参见 [协作指南](CONTRIBUTING.md)。
 
