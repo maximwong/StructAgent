@@ -1,6 +1,6 @@
 # StructAgent 协作指引
 
-适用于本仓库所有自动化开发助手和贡献者。项目当前已完成阶段7最简UI与稳定性测试，界面真实DeepSeek→Registry→AutoCAD已通过A/B/C两轮6次出图、保存重开和冻结基线核对；下一步是阶段8冻结。优先提高可演示链路的稳定性，并保持未来工程工具可插拔。
+适用于本仓库所有自动化开发助手和贡献者。项目正在阶段8准备`v0.1-demo`冻结候选版本，界面真实DeepSeek→Registry→AutoCAD已通过A/B/C两轮6次出图、保存重开和冻结基线核对。后续工作在新分支开发，优先保持Demo稳定及工程工具可插拔。
 
 - 开始修改前阅读 `README.md`、相关源文件和现有测试。按最小改动接入旧程序，避免重写已经验证的楼盖计算公式。
 - `legacy/rc_floor/` 是当前可运行的楼盖程序。设计计算与CAD绘图应逐步通过独立工具和 Adapter 接入；Controller 只依赖 Tool Registry、Schema、ToolResult、Project State，不直接导入楼盖旧程序或调用 RFALL。
@@ -18,3 +18,4 @@
 - Demo案例与冻结基线在 `demos/`；不要在测试中自动重新生成期望值。`examples.demo_acceptance` 实际调用本机API/CAD，公共CI仅用明确标记的模拟后端验证判定规则。已知失败保持原终态，意外失败停止批次且不自动重试。见 `docs/sentence-demo.md`。
 - 本机UI入口是`app.py`与`启动StructAgent.cmd`；UI只调通用Controller、读Project State和标准ToolResult，不导入旧引擎或调用LISP。专业呈现可扩展，不能在Controller增加楼盖分支。UI操作串行，运行中不退出或重复提交；刷新不取消工作，恢复沿用归属检查，图纸仅从成功结果打开。见`docs/demo-ui.md`。
 - 在PR中交代改动、保持不变的旧功能、测试结果、风险与后续技术债。多人或多模型接手时先阅读当前分支的PR与Issue，避免覆盖他人的未完成工作。
+- 不移动、删除或重新指向`v0.1-demo`标签，不把新功能推到`release/v0.1-demo`。后续缺陷修复另建分支、回归后发布新补丁标签；新专业参数或算法能力进入v0.2分支。冻结包不带API密钥、运行状态、DWG或本机环境。见`docs/releases/v0.1-demo.md`。

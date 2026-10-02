@@ -24,7 +24,7 @@ uv venv --seed --python 3.12.14 .venv-demo
 .venv-demo/Scripts/python.exe -m examples.environment_check
 ```
 
-uv 使用 Astral 的 Python 独立构建；这与 `actions/setup-python` 的 Windows 构建来源不同。本仓库 CI 固定 uv 安装器及 Python 版本，并在新环境运行同样的检查和回归。安装方式依据 [uv 官方 GitHub Actions 文档](https://docs.astral.sh/uv/guides/integration/github/) 和 [Python 版本文档](https://docs.astral.sh/uv/concepts/python-versions/)。阶段5.1已补充依赖SHA256锁、运行时归档及离线安装器，见 [离线部署说明](offline-deployment.md)；阶段8仍需完成正式版本发布与冻结。
+uv 使用 Astral 的 Python 独立构建；这与 `actions/setup-python` 的 Windows 构建来源不同。本仓库 CI 固定 uv 安装器及 Python 版本，并在新环境运行同样的检查和回归。安装方式依据 [uv 官方 GitHub Actions 文档](https://docs.astral.sh/uv/guides/integration/github/) 和 [Python 版本文档](https://docs.astral.sh/uv/concepts/python-versions/)。阶段5.1已补充依赖SHA256锁、运行时归档及离线安装器，见 [离线部署说明](offline-deployment.md)；阶段8冻结部署见[版本说明](releases/v0.1-demo.md)。
 
 旧 GUI 仍可使用原启动方式。需要确保使用本次独立环境时，执行 `.venv-demo/Scripts/python.exe legacy/rc_floor/app.py` 前先查阅旧入口说明；工具示例直接使用上述 Python 的绝对/相对可执行路径，避免启动器选择其他运行时。
 

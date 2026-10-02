@@ -1,6 +1,8 @@
 # StructAgent
 
-StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前已完成**阶段7：最简UI与稳定性测试**，本机浏览器界面通过既有Controller与Registry完成自然语言解析、楼盖设计和CAD出图。界面实机A/B/C两轮6/6通过保存重开与基线核对，下一步是阶段8演示版本冻结。
+StructAgent 的目标是可扩展的建筑结构设计智能体平台。**阶段8正在准备`v0.1-demo`冻结候选版本**，本机浏览器界面通过既有Controller与Registry完成自然语言解析、楼盖设计和CAD出图。界面实机A/B/C两轮6/6通过保存重开与基线核对；版本范围、固定部署和后续开发规则见[冻结说明](docs/releases/v0.1-demo.md)。
+
+最终验收通过并发布标签后，新设备演示请使用`git clone --branch v0.1-demo --single-branch https://github.com/maximwong/StructAgent.git`，再按部署说明配置环境和本机API。`main`与开发分支不作为已冻结版本的替代；后续功能在新分支开发，不移动此标签。
 
 本机环境已配置后，双击根目录的 **`启动StructAgent.cmd`**，填写自然语言要求、确认演示模板并点击“开始设计”。界面显示参数依据、执行进度、设计摘要、工具日志及“打开CAD图纸”按钮。见 [界面使用说明](docs/demo-ui.md) 和 [阶段7报告](docs/stages/phase-7.md)。
 
