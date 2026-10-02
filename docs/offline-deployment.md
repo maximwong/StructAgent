@@ -1,6 +1,6 @@
 # Windows x64 离线环境
 
-阶段5.1已在本机制作并验证CPython 3.12.14运行时及11个固定依赖的离线包。可复用源码、依赖SHA256和运行时归档SHA256在仓库；二进制包仅在本机 `verification/phase-5.1/offline/bundle/`，未上传公共仓库。阶段8使用相同受审查锁制作本机候选包，最终验收通过后公开Release提供源码与哈希，见[版本说明](releases/v0.1-demo.md)。
+阶段5.1已在本机制作并验证CPython 3.12.14运行时及11个固定依赖的离线包。可复用源码、依赖SHA256和运行时归档SHA256在仓库；二进制包仅在本机 `verification/phase-5.1/offline/bundle/`，未上传公共仓库。阶段8使用相同受审查锁制作本机冻结包，公开Release提供源码与哈希，见[版本说明](releases/v0.1-demo.md)。
 
 `deployment/offline-lock.json` 是受Git版本管理的制品清单，`requirements-demo.lock` 是相同11个wheel的pip哈希锁。全部wheel与官方PyPI对应版本的文件摘要核对通过。运行时来源为本机已有的CPython独立构建，打包时排除site-packages、缓存及脚本启动器，保留标准库、ensurepip、DLL、Tcl和许可证文件。它不包含AutoCAD、API密钥、项目状态或图纸。
 

@@ -1,6 +1,6 @@
 # StructAgent 协作指引
 
-适用于本仓库所有自动化开发助手和贡献者。项目正在阶段8准备`v0.1-demo`冻结候选版本，界面真实DeepSeek→Registry→AutoCAD已通过A/B/C两轮6次出图、保存重开和冻结基线核对。后续工作在新分支开发，优先保持Demo稳定及工程工具可插拔。
+适用于本仓库所有自动化开发助手和贡献者。项目的`v0.1-demo`为阶段8冻结版本，界面真实DeepSeek→Registry→AutoCAD已通过A/B/C两轮6次出图、保存重开和冻结基线核对。后续工作在新分支开发，优先保持Demo稳定及工程工具可插拔。
 
 - 开始修改前阅读 `README.md`、相关源文件和现有测试。按最小改动接入旧程序，避免重写已经验证的楼盖计算公式。
 - `legacy/rc_floor/` 是当前可运行的楼盖程序。设计计算与CAD绘图应逐步通过独立工具和 Adapter 接入；Controller 只依赖 Tool Registry、Schema、ToolResult、Project State，不直接导入楼盖旧程序或调用 RFALL。
