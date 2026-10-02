@@ -86,6 +86,9 @@ class FloorDemoProfile(LanguageProfile):
         for start, end in covered:
             remaining[start:end] = " " * (end - start)
         remaining = "".join(remaining)
+        # A conversational request prefix is not an engineering constraint. Match
+        # the whole phrase only at the start; never discard arbitrary "来" text.
+        remaining = re.sub(r"^\s*(?:(?:请|帮我|给我)\s*)?来一个", " ", remaining)
         # Explicitly bounded vocabulary keeps unhandled nonnumeric constraints from disappearing.
         words = ("帮我", "请", "设计", "一个", "办公楼", "办公", "单向板", "肋梁", "楼盖", "柱网", "跨度",
                  "混凝土", "梁纵筋", "梁纵向钢筋", "钢筋", "板筋", "箍筋", "活荷载", "采用", "使用",

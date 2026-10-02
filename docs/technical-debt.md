@@ -19,3 +19,5 @@
 阶段6已完成A/B/C两轮重复出图，UI仍属于阶段7。工作流中间步骤续跑及跨设备共享状态不在当前Demo范围；失败尝试保留历史，CAD恢复后重新运行生成新run_id，不将历史失败改成成功。修复和证据见 [阶段3.1报告](stages/phase-3.1.md)、[阶段4报告](stages/phase-4.md)、[阶段5报告](stages/phase-5.md) 与 [阶段6报告](stages/phase-6.md)。
 
 阶段5.1修复与剩余限制见 [技术债清理报告](stages/phase-5.1.md)、[归档策略](artifact-archive.md) 和 [离线部署](offline-deployment.md)。
+
+阶段6用户验收补充：已修复T09范围内“来一个”前缀误拒绝，四种开头及2.8荷载来源保留通过测试，真实DeepSeek返回ready。未知约束继续拦截，自由语言覆盖仍未关闭。本次2.8图纸尚待用户继续实机验收，见 [口语前缀修复报告](stages/phase-6-prefix-fix.md)。

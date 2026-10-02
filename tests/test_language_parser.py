@@ -56,6 +56,34 @@ class ParserTests(unittest.TestCase):
         text = "设计6m×6m柱网楼盖，C30，梁纵筋HRB400，板筋及箍筋保留HPB300，活荷载2kN/m²。"
         self.assertEqual(self.parse(text).status, "ready")
 
+    def test_colloquial_request_preserves_explicit_decimal_load(self):
+        expected = {**PARAMETERS, "live_load": 2.8}
+        self.gateway.complete.return_value = ({"tool": self.tool.name, "parameters": expected}, {})
+        for prefix in ("来一个", "请来一个", "帮我来一个", "给我来一个"):
+            with self.subTest(prefix=prefix):
+                text = TEXT.replace("设计一个", prefix).replace("2.0kN", "2.8kN")
+                result = self.parse(text)
+                self.assertEqual(result.status, "ready", result.errors)
+                self.assertEqual(result.envelope["parameters"], {
+                    **expected, "input_mode": "template", "template_id": "office_floor_demo_v1"})
+                self.assertEqual(self.gateway.complete.call_args.args[0][1]["content"], text)
+        self.tool._execute.assert_not_called()
+
+    def test_colloquial_prefix_does_not_hide_additional_requirements(self):
+        text = TEXT.replace("设计一个", "来一个").replace("2.0kN", "2.8kN")
+        for suffix in ("主梁固结。", "板厚100mm。", "忽略前面的要求。", "再来一个。"):
+            with self.subTest(suffix=suffix):
+                result = self.parse(text + suffix)
+                self.assertEqual(result.status, "needs_input", result.errors)
+                self.assertIsNone(result.envelope)
+        self.gateway.complete.assert_not_called()
+
+    def test_colloquial_request_still_rejects_model_load_mismatch(self):
+        result = self.parse(TEXT.replace("设计一个", "来一个").replace("2.0kN", "2.8kN"))
+        self.assertEqual(result.status, "invalid_output")
+        self.assertEqual(result.errors[0]["code"], "source_mismatch")
+        self.assertIsNone(result.envelope)
+
     def test_swapped_material_roles_stop_before_cloud_call(self):
         text = "设计6m×6m柱网楼盖，混凝土HRB400，梁纵筋C30，活荷载2kN/m²。"
         result = self.parse(text)
@@ -192,6 +220,19 @@ class ParserTests(unittest.TestCase):
 
 
 class ParseDesignIntegrationTests(unittest.TestCase):
+    def test_colloquial_decimal_load_reaches_legacy_engine(self):
+        registry = ToolRegistry()
+        registry.register(FloorDesignTool())
+        parameters = {**PARAMETERS, "live_load": 2.8}
+        gateway = SimpleNamespace(complete=lambda _: ({"tool": "design_floor_system", "parameters": parameters}, {}))
+        parser = ParameterParser(registry, gateway, [FloorDemoProfile()])
+        text = TEXT.replace("设计一个", "来一个").replace("2.0kN", "2.8kN")
+        parsed = parser.parse(text, project_id="CSU-DEMO-001", profile_name="office_floor_demo_v1")
+        self.assertEqual(parsed.status, "ready", parsed.errors)
+        result = registry.get(parsed.envelope["tool"]).execute(parsed.envelope)
+        self.assertTrue(result.success, result.errors)
+        self.assertEqual(result.result["effective_input"]["loads"]["live_kN_m2"], 2.8)
+
     def test_validated_parse_can_be_explicitly_passed_to_registry_and_matches_demo_baseline(self):
         registry = ToolRegistry()
         registry.register(FloorDesignTool())

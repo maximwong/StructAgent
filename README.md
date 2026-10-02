@@ -17,7 +17,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 - `tools/floor/`：楼盖设计/CAD Tool、Adapter、隔离计算与数据转换进程、结果引用及已确认的Demo模板。
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
 - `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态。
-- `examples/`、`tests/`：可运行示例及159项核心、设计、CAD、状态、解析、Controller、归档、部署与Demo验收测试，另有87项旧程序回归。
+- `examples/`、`tests/`：可运行示例及163项核心、设计、CAD、状态、解析、Controller、归档、部署与Demo验收测试，另有87项旧程序回归。
 - `demos/`：A/B/C自然语言、预期参数及已冻结的完整设计/CAD场景基线。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
