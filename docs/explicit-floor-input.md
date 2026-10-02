@@ -42,6 +42,6 @@
 
 这一步提供完整输入和表单缺参交互，尚未提供一句话补齐全部字段或多轮对话自动合并状态。完整表单缺项先停止解析，不能靠同次文字填齐缺失模型。任意跨数、布置及其他结构能力仍需扩展和验证旧引擎。
 
-Controller、Workflow、设计/CAD Tool、Adapter及旧计算/LISP未改动。插件负责Schema、表单描述与语言编辑契约。下一步为独立`check_floor_design`，不宣称已完成v0.2自主校核闭环。
+插件负责Schema、表单描述与语言编辑契约。后续阶段已在插件工作流中接入独立`check_floor_design`，Controller、设计/CAD Tool、Adapter及旧计算/LISP仍未改动；见[校核说明](floor-check-tool.md)。尚未完成v0.2自主改参闭环。
 
 本机验收包括修改后完整模型的两次真实出图；公共CI模拟云/CAD，计算仍真实。见[阶段报告](stages/phase-9.md)。

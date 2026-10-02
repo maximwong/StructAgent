@@ -62,13 +62,16 @@ class DemoAcceptance:
             if result["status"] == "needs_input" and "live_load" not in result["parse_result"]["missing_fields"]:
                 raise ValueError("Missing live load was not reported.")
             return {}, original_documents
-        if (not result["success"] or result["steps"] != {"parse": "completed", "design": "completed", "cad": "completed"}
-                or len(result["tool_calls"]) != 2 or persisted["persistence_state"] != "COMPLETED"):
+        if (not result["success"] or result["steps"] != {"parse": "completed", "design": "completed", "check": "completed", "cad": "completed"}
+                or len(result["tool_calls"]) != 3 or persisted["persistence_state"] != "COMPLETED"):
             raise ValueError("Demo workflow did not complete.")
         parameters = result["parse_result"]["envelope"]["parameters"]
         if any(parameters.get(k) != v for k, v in case["parameters"].items()):
             raise ValueError("Parsed parameters differ from the declared Demo.")
-        design, cad = [read_json(c["result_path"]) for c in result["tool_calls"]]
+        design, checked, cad = [read_json(c["result_path"]) for c in result["tool_calls"]]
+        if (checked['result']['status'] != 'PASS' or checked['result']['summary']['failed'] != 0
+                or checked['metadata']['design_sha256'] != design['metadata']['legacy_result_sha256']):
+            raise ValueError('Independent section checks did not pass for this design.')
         baseline = self.baselines[case["id"]]
         if (design["metadata"]["legacy_result_sha256"] != baseline["design_sha256"]
                 or canonical_hash(design["result"]["legacy_result"]) != baseline["design_sha256"]
@@ -120,7 +123,7 @@ class DemoAcceptance:
             plan.extend((number, c, 240) for c in self.spec["cases"])
             if number == 1 and timeout_probe:
                 plan.append((number, {"id": "cad_timeout", "text": self.spec["cases"][0]["text"],
-                    "expected_status": "failed", "expected_calls": 2, "error": "cad_timeout"}, 10))
+                    "expected_status": "failed", "expected_calls": 3, "error": "cad_timeout"}, 10))
         hashes, identities, original_documents = {}, set(), None
         for number, case, timeout in plan:
             if progress:

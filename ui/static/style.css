@@ -2,3 +2,4 @@
 .full-model {table-layout:fixed;}
 .full-model td:nth-child(2) {white-space:normal;}
 .parameter-table {max-height:480px;overflow:auto;}
+.steps {grid-template-columns:repeat(4,1fr);}

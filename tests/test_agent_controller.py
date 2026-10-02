@@ -315,7 +315,7 @@ class FloorWorkflowIntegrationTests(unittest.TestCase):
         loaded = FloorDesignStore(self.root / "designs").load(ref, project_id="CSU-DEMO-001")
         baseline = json.loads((ROOT / "tests/fixtures/floor_baselines.json").read_text())["cases"]["demo_a"]
         self.assertEqual(loaded.metadata["legacy_result_sha256"], baseline["result_sha256"])
-        self.assertEqual(result["steps"], {"parse": "completed", "design": "completed", "cad": "completed"})
+        self.assertEqual(result["steps"], {"parse": "completed", "design": "completed", "check": "completed", "cad": "completed"})
         self.assertTrue(any(a["type"] == "dwg" for a in result["artifacts"]))
 
     def test_snapshot_failure_stops_cad(self):

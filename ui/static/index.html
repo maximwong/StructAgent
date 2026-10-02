@@ -27,10 +27,11 @@
   </section>
   <section class="results" aria-labelledby="result-title">
     <div class="card"><div class="row"><div><h2 id="result-title">设计进度</h2><p id="job-title" class="muted">填写要求后开始设计</p></div><span id="status" class="tag">等待开始</span></div>
-      <ol class="steps"><li id="step-parse"><b>1</b><span>理解与校验</span><small>等待</small></li><li id="step-design"><b>2</b><span>楼盖设计</span><small>等待</small></li><li id="step-cad"><b>3</b><span>CAD出图</span><small>等待</small></li></ol>
+      <ol class="steps"><li id="step-parse"><b>1</b><span>理解与校验</span><small>等待</small></li><li id="step-design"><b>2</b><span>楼盖设计</span><small>等待</small></li><li id="step-check"><b>3</b><span>独立校核</span><small>等待</small></li><li id="step-cad"><b>4</b><span>CAD出图</span><small>等待</small></li></ol>
       <div id="issues" aria-live="polite"></div>
     </div>
     <div class="card"><h2>解析参数</h2><p id="parameter-empty" class="muted">参数确认后将显示数值及原文依据。</p><div class="parameter-table"><table id="parameters" hidden><thead><tr><th>参数</th><th>数值</th><th>原文依据</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="card"><h2>独立校核</h2><p id="check-summary">尚未完成独立校核</p><p class="small muted">仅复核实配截面与抗剪约束；不包含独立内力分析及规范全项审查。</p><details id="check-details" hidden><summary>范围与逐项结果</summary><p id="check-coverage"></p><div class="parameter-table"><table class="full-model"><thead><tr><th>检查项</th><th>数值与限值</th><th>结果</th></tr></thead><tbody id="check-rows"></tbody></table></div></details></div>
     <div class="card"><div class="row"><h2>设计与图纸</h2><button id="open-cad" class="primary compact" disabled>打开CAD图纸</button></div><p id="design-summary" class="muted">尚未完成计算</p><p id="cad-status">尚未生成图纸</p><p id="drawing-path" class="small path"></p><details id="warning-box" hidden><summary>设计提示与校核警告</summary><ul id="warnings"></ul></details></div>
     <div class="card"><h2>工具调用日志</h2><ul id="tool-log" class="log"><li class="muted">暂无工具调用</li></ul><p id="run-id" class="small muted"></p></div>
   </section>

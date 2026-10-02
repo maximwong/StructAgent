@@ -81,7 +81,7 @@ class DemoTests(unittest.TestCase):
         self.assertEqual(len({r["run_id"] for r in result["runs"]}), 10)
         self.assertEqual(len(self.gateway.calls), 10)
         self.assertEqual(len(self.backend.calls), 7)
-        self.assertEqual(result["checked_files"], 42)
+        self.assertEqual(result["checked_files"], 48)
         self.assertTrue(result["previous_artifacts_unchanged"])
         self.assertEqual(result["evidence_kind"], "simulated")
         self.assertTrue(all(r["qualified"] for r in result["runs"]))
