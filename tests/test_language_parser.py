@@ -11,10 +11,9 @@ from core import EngineeringTool, ToolRegistry, ToolResult
 from llm import GatewayError
 from tools.floor import FloorDesignTool
 from tools.floor.language_profile import FloorDemoProfile
-
+from tests.semantic_fixtures import floor_proposal, clarification, PARAMETERS
 
 TEXT = "设计一个6m×6m柱网的办公楼单向板肋梁楼盖，采用C30和HRB400，活荷载2.0kN/m²。"
-PARAMETERS = {"span_x": 6000, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.0}
 
 
 class ParserTests(unittest.TestCase):
@@ -24,154 +23,194 @@ class ParserTests(unittest.TestCase):
         self.tool._execute = Mock(side_effect=AssertionError("Parsing must not execute tools"))
         self.registry.register(self.tool)
         self.gateway = Mock()
-        self.gateway.complete.return_value = ({"tool": self.tool.name, "parameters": copy.deepcopy(PARAMETERS)}, {"model": "test"})
+        self.gateway.complete.return_value = (floor_proposal(), {"model": "test"})
         self.parser = ParameterParser(self.registry, self.gateway, [FloorDemoProfile()])
 
     def parse(self, text=TEXT, **kwargs):
         return self.parser.parse(text, project_id="测试工程", profile_name="office_floor_demo_v1", **kwargs)
 
-    def test_valid_demo_is_validated_envelope_and_does_not_execute(self):
+    def test_valid_demo_envelope_and_unique_response_schema(self):
         result = self.parse()
         self.assertEqual(result.status, "ready", result.errors)
-        self.assertEqual(result.envelope["parameters"], {
-            **PARAMETERS, "input_mode": "template", "template_id": "office_floor_demo_v1"})
-        self.assertEqual(result.envelope["project_id"], "测试工程")
+        self.assertEqual(result.envelope["parameters"], {**PARAMETERS, "input_mode": "template", "template_id": "office_floor_demo_v1"})
         self.tool.validate(result.envelope)
+        self.assertEqual(result.source_evidence["live_load"], {"quote": "2.0kN/m²", "index": 0})
         self.tool._execute.assert_not_called()
         system, user = self.gateway.complete.call_args.args[0]
         self.assertEqual(user["content"], TEXT)
-        self.assertEqual(json.loads(system["content"])["tool"]["name"], self.tool.name)
-        schema = json.loads(system["content"])["response_schema"]
-        self.assertEqual(set(schema["properties"]["parameters"]["properties"]), set(PARAMETERS))
-        self.assertNotIn("input_schema", json.loads(system["content"])["tool"])
+        instructions = json.loads(system["content"])
+        self.assertEqual(set(instructions["response_schema"]["properties"]), {"tool", "parameters", "evidence", "clarifications"})
+        self.assertNotIn("input_schema", instructions["tool"])
 
     def test_template_must_be_explicit(self):
-        for profile in (None, "unknown"):
-            result = self.parser.parse(TEXT, project_id="p", profile_name=profile)
+        for name in (None, "unknown"):
+            result = self.parser.parse(TEXT, project_id="p", profile_name=name)
             self.assertEqual(result.status, "needs_input")
             self.assertEqual(result.missing_fields, ["profile_name"])
         self.gateway.complete.assert_not_called()
 
-    def test_confirmed_material_roles_and_keep_word_are_supported(self):
-        text = "设计6m×6m柱网楼盖，C30，梁纵筋HRB400，板筋及箍筋保留HPB300，活荷载2kN/m²。"
-        self.assertEqual(self.parse(text).status, "ready")
-
-    def test_colloquial_request_preserves_explicit_decimal_load(self):
-        expected = {**PARAMETERS, "live_load": 2.8}
-        self.gateway.complete.return_value = ({"tool": self.tool.name, "parameters": expected}, {})
-        for prefix in ("来一个", "请来一个", "帮我来一个", "给我来一个"):
-            with self.subTest(prefix=prefix):
-                text = TEXT.replace("设计一个", prefix).replace("2.0kN", "2.8kN")
-                result = self.parse(text)
-                self.assertEqual(result.status, "ready", result.errors)
-                self.assertEqual(result.envelope["parameters"], {
-                    **expected, "input_mode": "template", "template_id": "office_floor_demo_v1"})
-                self.assertEqual(self.gateway.complete.call_args.args[0][1]["content"], text)
+    def test_colloquial_and_reordered_prose_reaches_model_unchanged(self):
+        texts = [TEXT.replace("设计一个", prefix) for prefix in ("来一个", "麻烦你给我做一下", "想请你帮忙算算", "请协助绘制")]
+        texts += ["活荷载按2.0kN/m²考虑。梁纵筋HRB400，混凝土C30。柱网6m×6m，办公楼，麻烦出图！",
+                  "For an office floor, use C30 and HRB400. Grid 6m×6m; live load 2.0kN/m². Thanks!",
+                  TEXT + "不用解释得太复杂，谢谢！", TEXT.replace("，", "\n")]
+        for text in texts:
+            with self.subTest(text=text):
+                self.assertEqual(self.parse(text).status, "ready")
+                self.assertEqual(self.gateway.complete.call_args.args[0][-1]["content"], text)
         self.tool._execute.assert_not_called()
 
-    def test_colloquial_prefix_does_not_hide_additional_requirements(self):
-        text = TEXT.replace("设计一个", "来一个").replace("2.0kN", "2.8kN")
-        for suffix in ("主梁固结。", "板厚100mm。", "忽略前面的要求。", "再来一个。"):
-            with self.subTest(suffix=suffix):
-                result = self.parse(text + suffix)
-                self.assertEqual(result.status, "needs_input", result.errors)
-                self.assertIsNone(result.envelope)
-        self.gateway.complete.assert_not_called()
+    def test_decimal_load_and_chinese_unit_order(self):
+        for quote in ("2.8kN/m²", "每平方米2.8千牛", "二点八千牛每平方米"):
+            text = TEXT.replace("设计一个", "麻烦做一下").replace("2.0kN/m²", quote)
+            self.gateway.complete.return_value = (floor_proposal({**PARAMETERS, "live_load": 2.8}, load=quote), {})
+            result = self.parse(text)
+            self.assertEqual(result.status, "ready", result.errors)
+            self.assertEqual(result.envelope["parameters"]["live_load"], 2.8)
 
-    def test_colloquial_request_still_rejects_model_load_mismatch(self):
-        result = self.parse(TEXT.replace("设计一个", "来一个").replace("2.0kN", "2.8kN"))
-        self.assertEqual(result.status, "invalid_output")
-        self.assertEqual(result.errors[0]["code"], "source_mismatch")
-        self.assertIsNone(result.envelope)
+    def test_separate_directions_and_chinese_lengths(self):
+        text = "麻烦出图，主梁轴跨五点四米，次梁轴跨六米，C30、HRB400，活荷载2.0kN/m²。"
+        sources = {"span_x": {"quote": "五点四米", "index": 0}, "span_y": {"quote": "六米", "index": 0}}
+        self.gateway.complete.return_value = (floor_proposal({**PARAMETERS, "span_x": 5400}, evidence=sources), {})
+        self.assertEqual(self.parse(text).status, "ready")
 
-    def test_swapped_material_roles_stop_before_cloud_call(self):
-        text = "设计6m×6m柱网楼盖，混凝土HRB400，梁纵筋C30，活荷载2kN/m²。"
-        result = self.parse(text)
-        self.assertEqual(result.status, "needs_input")
-        self.assertIn("material_assignment_conflict", [e["code"] for e in result.errors])
-        self.gateway.complete.assert_not_called()
+    def test_changed_material_load_and_unit_variants(self):
+        cases = [("7.2m×6000mm", "C35", "3.5kN/m2", 7200, 3.5),
+                 ("6×6m", "C25", "2kPa", 6000, 2),
+                 ("6000毫米×6000毫米", "c40", "0kN/m^2", 6000, 0),
+                 ("六米乘六米", "C30", "二千牛每平方米", 6000, 2)]
+        for pair, concrete, load, x, q in cases:
+            text = f"设计办公楼楼盖，柱网{pair}，{concrete}，HRB400，活荷载{load}。"
+            parameters = {**PARAMETERS, "span_x": x, "concrete": concrete.upper(), "live_load": q}
+            self.gateway.complete.return_value = (floor_proposal(parameters, pair=pair, concrete=concrete, load=load), {})
+            result = self.parse(text)
+            self.assertEqual(result.status, "ready", result.errors)
 
-    def test_cloud_diagnostic_metadata_survives_parser(self):
-        self.gateway.complete.side_effect = GatewayError("api_timeout", "Safe error", {"request_stage": "reading_body"})
-        self.assertEqual(self.parse().metadata, {"request_stage": "reading_body"})
+    def test_confirmed_material_roles_and_keep_word_are_supported(self):
+        text = TEXT + "板筋及箍筋保留HPB300。"
+        self.assertEqual(self.parse(text).status, "ready")
 
-    def test_each_critical_field_missing_is_reported_without_default_or_api_charge(self):
-        cases = {"span_x": TEXT.replace("6m×6m", ""), "span_y": TEXT.replace("6m×6m", ""),
-                 "concrete": TEXT.replace("C30", ""), "steel": TEXT.replace("HRB400", ""),
-                 "live_load": TEXT.replace("活荷载2.0kN/m²", "")}
-        for field, text in cases.items():
+    def test_each_missing_field_is_reported_after_semantic_extraction(self):
+        replacements = {"span_x": "6m×6m", "span_y": "6m×6m", "concrete": "C30", "steel": "HRB400", "live_load": "活荷载2.0kN/m²"}
+        for field, fragment in replacements.items():
             with self.subTest(field=field):
-                result = self.parse(text)
+                parameters = {**PARAMETERS, field: None}
+                if field.startswith("span_"):
+                    parameters.update(span_x=None, span_y=None)
+                self.gateway.complete.return_value = (floor_proposal(parameters), {})
+                result = self.parse(TEXT.replace(fragment, ""))
                 self.assertEqual(result.status, "needs_input", result.errors)
                 self.assertIn(field, result.missing_fields)
                 self.assertIsNone(result.envelope)
-        self.gateway.complete.assert_not_called()
+                self.assertIn("请补充", result.errors[0]["message"])
+        self.tool._execute.assert_not_called()
 
-    def test_changed_span_material_load_and_unit_variants(self):
-        cases = (
-            ("设计办公楼单向板肋梁楼盖，柱网7.2m×6000mm，C35，梁纵筋HRB400，活荷载3.5kN/m2。", 7200, 6000, "C35", 3.5),
-            ("设计6×6m柱网办公楼楼盖，C25，HRB400，活荷载2kPa。", 6000, 6000, "C25", 2),
-            ("设计6000毫米×6000毫米柱网楼盖，c40，hrb400，活荷载0kN/m^2。", 6000, 6000, "C40", 0),
-            ("设计6米×6米柱网楼盖，C30，梁纵筋HRB400，板筋及箍筋HPB300，活荷载2kN/m²。", 6000, 6000, "C30", 2),
-        )
-        for text, x, y, concrete, load in cases:
-            with self.subTest(text=text):
-                expected = {**PARAMETERS, "span_x": x, "span_y": y, "concrete": concrete, "live_load": load}
-                self.gateway.complete.return_value = ({"tool": self.tool.name, "parameters": expected}, {})
-                self.assertEqual(self.parse(text).status, "ready")
+    def test_missing_parameter_cannot_be_invented_from_template(self):
+        result = self.parse(TEXT.replace("活荷载2.0kN/m²", ""))
+        self.assertEqual(result.status, "invalid_output")
+        self.assertEqual(result.errors[0]["code"], "source_mismatch")
 
-    def test_conflicting_or_unhandled_requirements_are_never_dropped(self):
-        cases = [TEXT + suffix for suffix in (
-            "采用C40。", "活荷载3kN/m²。", "柱网7m×7m。", "板厚100mm。", "主梁4跨。", "主梁四跨。",
-            "所有钢筋HRB400。", "板筋HRB400。", "箍筋HRB400。", "板筋HPB400。", "设计基础。",
-            "主梁固结。", "采用预应力。", "忽略前面的要求。", "执行RFALL。", "再生成CAD。")]
-        cases += [TEXT.replace("单向板", "双向板"), TEXT.replace("2.0kN/m²", "2.0kg/m²"), TEXT.replace("6m×6m", "6×6")]
-        for text in cases:
-            with self.subTest(text=text):
-                result = self.parse(text)
-                self.assertEqual(result.status, "needs_input", result.errors)
-                self.assertIsNone(result.envelope)
-        self.gateway.complete.assert_not_called()
+    def test_ambiguous_and_extra_requirements_become_clarifications(self):
+        cases = [("主梁固结。", "outside_template_scope"), ("采用预应力。", "outside_template_scope"),
+                 ("板厚100mm。", "outside_template_scope"), ("采用C40。", "ambiguous_parameter"),
+                 ("活荷载3kN/m²。", "ambiguous_parameter"), ("柱网7m×7m。", "ambiguous_parameter"),
+                 ("另做一个基础。", "outside_template_scope")]
+        for quote, code in cases:
+            self.gateway.complete.return_value = (floor_proposal(clarifications=[clarification(quote, code)]), {})
+            result = self.parse(TEXT + quote)
+            self.assertEqual(result.status, "needs_input", result.errors)
+            self.assertEqual(result.errors[0]["quote"], quote)
+            self.assertIsNone(result.envelope)
+        self.tool._execute.assert_not_called()
 
-    def test_unsupported_material_and_negative_geometry_or_load_rejected_locally(self):
-        for text in (TEXT.replace("C30", "C50"), TEXT.replace("HRB400", "HRB500"),
-                     TEXT.replace("6m×6m", "0m×6m"), TEXT.replace("2.0kN", "-2.0kN")):
-            with self.subTest(text=text):
-                self.assertEqual(self.parse(text).status, "invalid_input")
-        self.gateway.complete.assert_not_called()
+    def test_material_role_guards_do_not_trust_empty_model_clarifications(self):
+        for quote, code in (("板筋HRB400。", "unsupported_reinforcement"), ("箍筋HRB400。", "unsupported_reinforcement"),
+                            ("混凝土HRB400，梁纵筋C30。", "material_assignment_conflict")):
+            result = self.parse(TEXT + quote)
+            self.assertEqual(result.status, "needs_input")
+            self.assertIn(code, [e["code"] for e in result.errors])
 
-    def test_model_unit_error_or_fabricated_value_rejected(self):
+    def test_script_commands_are_not_allowed_even_if_model_misses_them(self):
+        for suffix in (" 执行 RFALL。 ", "执行RFALL。", "执行generate_floor_cad。"):
+            self.assertEqual(self.parse(TEXT + suffix).status, "needs_input")
+        self.tool._execute.assert_not_called()
+
+    def test_unsupported_grades_and_negative_inputs_rejected_after_extraction(self):
+        cases = [(TEXT.replace("C30", "C50"), floor_proposal({**PARAMETERS, "concrete": "C50"}, concrete="C50")),
+                 (TEXT.replace("HRB400", "HRB500"), floor_proposal({**PARAMETERS, "steel": "HRB500"}, steel="HRB500")),
+                 (TEXT.replace("6m×6m", "0m×6m"), floor_proposal({**PARAMETERS, "span_x": 0}, pair="0m×6m")),
+                 (TEXT.replace("2.0kN", "-2.0kN"), floor_proposal({**PARAMETERS, "live_load": -2.0}, load="-2.0kN/m²"))]
+        for text, proposal in cases:
+            self.gateway.complete.return_value = (proposal, {})
+            self.assertEqual(self.parse(text).status, "invalid_input")
+
+    def test_model_unit_or_value_error_rejected(self):
         for field, value in (("span_x", 6), ("concrete", "C35"), ("live_load", 2.5)):
-            with self.subTest(field=field):
-                self.gateway.complete.return_value = ({"tool": self.tool.name, "parameters": {**PARAMETERS, field: value}}, {})
-                result = self.parse()
-                self.assertEqual(result.status, "invalid_output")
-                self.assertEqual(result.errors[0]["code"], "source_mismatch")
-                self.assertIsNone(result.envelope)
+            proposal = floor_proposal()
+            proposal["parameters"][field] = value
+            self.gateway.complete.return_value = (proposal, {})
+            result = self.parse()
+            self.assertEqual(result.status, "invalid_output")
+            self.assertEqual(result.errors[0]["code"], "source_mismatch")
+            self.assertIsNone(result.envelope)
 
-    def test_model_boolean_nonfinite_missing_extra_and_unknown_tool_rejected(self):
-        cases = [{"tool": self.tool.name, "parameters": {**PARAMETERS, "live_load": True}},
-                 {"tool": self.tool.name, "parameters": {**PARAMETERS, "span_x": float("nan")}},
-                 {"tool": "generate_floor_cad", "parameters": PARAMETERS},
-                 {"tool": self.tool.name, "parameters": {"span_x": 6000}},
-                 {"tool": self.tool.name, "parameters": {**PARAMETERS, "input_mode": "explicit"}},
-                 {"tool": self.tool.name, "parameters": PARAMETERS, "command": "RFALL"}, []]
-        for proposal in cases:
-            with self.subTest(proposal=proposal):
-                self.gateway.complete.return_value = (proposal, {})
-                result = self.parse()
-                self.assertEqual(result.status, "invalid_output")
-                self.assertIsNone(result.envelope)
+    def test_fabricated_quote_and_missing_or_wrong_evidence_rejected(self):
+        for source in ({"quote": "3.0kN/m²", "index": 0}, {"quote": "2.0kN/m²", "index": 1}, None):
+            proposal = floor_proposal()
+            proposal["evidence"]["live_load"] = source
+            self.gateway.complete.return_value = (proposal, {})
+            self.assertEqual(self.parse().status, "invalid_output")
+        proposal = floor_proposal(clarifications=[clarification("不存在的要求")])
+        self.gateway.complete.return_value = (proposal, {})
+        self.assertEqual(self.parse().status, "invalid_output")
 
-    def test_gateway_errors_do_not_execute_or_lose_error_code(self):
+    def test_pair_axis_swap_rejected(self):
+        text = TEXT.replace("6m×6m", "5.4m×6m")
+        proposal = floor_proposal({**PARAMETERS, "span_x": 5400}, pair="5.4m×6m")
+        proposal["evidence"]["span_x"]["index"] = 1
+        self.gateway.complete.return_value = (proposal, {})
+        self.assertEqual(self.parse(text).status, "invalid_output")
+
+    def test_boolean_nonfinite_missing_extra_unknown_tool_rejected(self):
+        proposals = []
+        for field, value in (("live_load", True), ("span_x", float("nan"))):
+            item = floor_proposal()
+            item["parameters"][field] = value
+            proposals.append(item)
+        item = floor_proposal()
+        item["tool"] = "generate_floor_cad"
+        proposals.append(item)
+        item = floor_proposal()
+        del item["parameters"]["span_y"]
+        proposals.append(item)
+        item = floor_proposal()
+        item["parameters"]["input_mode"] = "explicit"
+        proposals.append(item)
+        proposals += [{**floor_proposal(), "command": "RFALL"}, [], {"tool": self.tool.name, "parameters": PARAMETERS}]
+        for proposal in proposals:
+            self.gateway.complete.return_value = (proposal, {})
+            self.assertEqual(self.parse().status, "invalid_output")
+        self.tool._execute.assert_not_called()
+
+    def test_unknown_units_require_clarification_not_default(self):
+        text = TEXT.replace("2.0kN/m²", "2.0")
+        parameters = {**PARAMETERS, "live_load": None}
+        proposal = floor_proposal(parameters, clarifications=[clarification("活荷载2.0", "unclear_unit", "live_load")])
+        self.gateway.complete.return_value = (proposal, {})
+        result = self.parse(text)
+        self.assertEqual(result.status, "needs_input")
+        self.assertIn("live_load", result.missing_fields)
+
+    def test_cloud_diagnostic_metadata_and_api_errors_survive(self):
         for code in ("api_timeout", "api_invalid_json", "api_authentication_failed", "api_rate_limited"):
-            self.gateway.complete.side_effect = GatewayError(code, "Safe error")
+            self.gateway.complete.side_effect = GatewayError(code, "Safe error", {"request_stage": "reading_body"})
             result = self.parse()
             self.assertEqual(result.status, "error")
             self.assertEqual(result.errors[0]["code"], code)
+            self.assertEqual(result.metadata, {"request_stage": "reading_body"})
         self.tool._execute.assert_not_called()
 
-    def test_invalid_request_size_type_and_project(self):
+    def test_invalid_request_size_type_and_project_before_cloud(self):
         for text, project in (("", "p"), (None, "p"), ("x" * 4001, "p"), (TEXT, " ")):
             result = self.parser.parse(text, project_id=project, profile_name="office_floor_demo_v1")
             self.assertEqual(result.status, "invalid_input")
@@ -220,29 +259,25 @@ class ParserTests(unittest.TestCase):
 
 
 class ParseDesignIntegrationTests(unittest.TestCase):
-    def test_colloquial_decimal_load_reaches_legacy_engine(self):
+    def design(self, text, proposal):
         registry = ToolRegistry()
         registry.register(FloorDesignTool())
-        parameters = {**PARAMETERS, "live_load": 2.8}
-        gateway = SimpleNamespace(complete=lambda _: ({"tool": "design_floor_system", "parameters": parameters}, {}))
+        gateway = SimpleNamespace(complete=lambda _: (proposal, {}))
         parser = ParameterParser(registry, gateway, [FloorDemoProfile()])
-        text = TEXT.replace("设计一个", "来一个").replace("2.0kN", "2.8kN")
         parsed = parser.parse(text, project_id="CSU-DEMO-001", profile_name="office_floor_demo_v1")
         self.assertEqual(parsed.status, "ready", parsed.errors)
-        result = registry.get(parsed.envelope["tool"]).execute(parsed.envelope)
+        return registry.get(parsed.envelope["tool"]).execute(parsed.envelope)
+
+    def test_free_prose_decimal_load_reaches_legacy_engine(self):
+        text = TEXT.replace("设计一个", "劳驾做一下").replace("2.0kN/m²", "每平方米2.8千牛")
+        result = self.design(text, floor_proposal({**PARAMETERS, "live_load": 2.8}, load="每平方米2.8千牛"))
         self.assertTrue(result.success, result.errors)
         self.assertEqual(result.result["effective_input"]["loads"]["live_kN_m2"], 2.8)
 
-    def test_validated_parse_can_be_explicitly_passed_to_registry_and_matches_demo_baseline(self):
-        registry = ToolRegistry()
-        registry.register(FloorDesignTool())
-        gateway = SimpleNamespace(complete=lambda _: ({"tool": "design_floor_system", "parameters": PARAMETERS}, {}))
-        parser = ParameterParser(registry, gateway, [FloorDemoProfile()])
-        parsed = parser.parse(TEXT, project_id="CSU-DEMO-001", profile_name="office_floor_demo_v1")
-        result = registry.get(parsed.envelope["tool"]).execute(parsed.envelope)
+    def test_validated_parse_matches_frozen_demo_baseline(self):
+        result = self.design(TEXT, floor_proposal())
         self.assertTrue(result.success, result.errors)
-        digest = hashlib.sha256(json.dumps(result.result["legacy_result"], ensure_ascii=False,
-                                          sort_keys=True, allow_nan=False).encode()).hexdigest()
+        digest = hashlib.sha256(json.dumps(result.result["legacy_result"], ensure_ascii=False, sort_keys=True, allow_nan=False).encode()).hexdigest()
         baseline = json.loads((Path(__file__).parent / "fixtures/floor_baselines.json").read_text(encoding="utf-8"))
         self.assertEqual(digest, baseline["cases"]["demo_a"]["result_sha256"])
 

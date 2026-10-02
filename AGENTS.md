@@ -6,7 +6,7 @@
 - `legacy/rc_floor/` 是当前可运行的楼盖程序。设计计算与CAD绘图应逐步通过独立工具和 Adapter 接入；Controller 只依赖 Tool Registry、Schema、ToolResult、Project State，不直接导入楼盖旧程序或调用 RFALL。
 - 当前支持的材料组合为梁纵筋HRB400、板筋与箍筋HPB300，以及既有C25/C30/C35/C40混凝土映射。扩大工程范围时同时更新校验、计算依据和测试。
 - 不把自然语言模型的原始文本送进工程计算；必须经过结构化解析和参数校验。缺少关键工程参数时明确报告。
-- 通用参数解析器不导入楼盖脚本；专业语言范围与证据检查由Tool所属的LanguageProfile提供。解析阶段不执行工具。当前只支持显式选择的办公楼Demo模板，不静默忽略未知文字/数值约束；ready仅表示输入契约通过，结构适用范围仍由设计工具校核。见 `docs/deepseek-integration.md`。
+- 通用参数解析器不导入楼盖脚本；专业语义契约与证据检查由Tool所属的LanguageProfile提供（inspect/response_schema/resolve/source_evidence）。楼盖不以词汇白名单限制措辞，先调用模型提取五项参数、逐字原文依据和澄清事项，再本地校验。解析阶段不执行工具。仍显式选择办公楼Demo模板，不猜单位/缺参，不静默忽略额外工程要求；ready仅表示输入契约通过，结构适用范围仍由设计工具校核。见 `docs/deepseek-integration.md`。
 - Controller使用应用声明的Workflow和ResultBinding，不能执行LLM生成的流程或表达式。专业注册与步骤绑定放在 `tools/<专业>/plugin.py`；任何步骤失败必须停止后续工具，外部工具明确返回布尔metadata.recovery_required。每次重试生成新run_id，禁止自动重放未知完成状态的CAD步骤。见 `docs/agent-controller.md`。
 - 不提交密钥、个人路径、客户工程文件、生成图纸、验证日志或CAD临时文件。公开仓库中仅放可复用源码、匿名样例和测试。
 - 新Tool继承 `core.EngineeringTool`，实现 `_execute`；沿用基类 `execute` 的输入与输出校验。完整Envelope及结果规范见 `docs/tool-core.md`，示例见 `examples/dummy_tool.py`。

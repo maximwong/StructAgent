@@ -17,7 +17,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 - `tools/floor/`：楼盖设计/CAD Tool、Adapter、隔离计算与数据转换进程、结果引用及已确认的Demo模板。
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
 - `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态。
-- `examples/`、`tests/`：可运行示例及163项核心、设计、CAD、状态、解析、Controller、归档、部署与Demo验收测试，另有87项旧程序回归。
+- `examples/`、`tests/`：可运行示例及173项核心、设计、CAD、状态、解析、Controller、归档、部署与Demo验收测试，另有87项旧程序回归。
 - `demos/`：A/B/C自然语言、预期参数及已冻结的完整设计/CAD场景基线。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
@@ -76,7 +76,7 @@ python -m examples.floor_cad --case changed
 python -m examples.parse_request --template office_floor_demo_v1 --text "设计一个6m×6m柱网的办公楼单向板肋梁楼盖，采用C30和HRB400，活荷载2.0kN/m²。"
 ```
 
-输出 `ready` 表示参数提取及输入契约校验通过，包含后续工具可使用的Envelope；此命令仅解析。缺项、歧义、模板外要求、模型JSON错误或API失败会返回对应状态，禁止带着失败结果继续设计。输入顺序为主梁轴跨×次梁轴跨，梁纵筋HRB400、板筋和箍筋HPB300。当前使用明确限定的中文Demo表达范围；使用方法、模板限制和扩展接口见 [DeepSeek接入说明](docs/deepseek-integration.md)，验收见 [阶段4报告](docs/stages/phase-4.md)。
+输出 `ready` 表示参数提取及输入契约校验通过，包含后续工具可使用的Envelope及逐字原文依据；此命令仅解析。口语、换序、中英文、换行及中文数字先交由模型理解，不用词汇白名单拦截。缺项、歧义或模板外要求返回具体澄清；模型格式错误或API失败仍停止后续执行。输入顺序为主梁轴跨×次梁轴跨，梁纵筋HRB400、板筋和箍筋HPB300。使用方法、模板边界和扩展接口见 [DeepSeek接入说明](docs/deepseek-integration.md)，当前语义改进见 [阶段6.1报告](docs/stages/phase-6.1.md)。
 
 ## 通过Controller自动完成设计与CAD
 

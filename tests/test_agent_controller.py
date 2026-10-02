@@ -20,6 +20,7 @@ from tools.floor.cad_adapter import FloorCADError
 from tools.floor.design_store import DesignReferenceError, FloorDesignStore
 from tools.floor.language_profile import FloorDemoProfile
 from tools.floor.plugin import register_floor_workflow
+from tests.semantic_fixtures import floor_proposal
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -301,7 +302,7 @@ class FloorWorkflowIntegrationTests(unittest.TestCase):
         self.backend = SimulatedCAD()
         self.workflow = register_floor_workflow(self.registry, self.root, cad_backend=self.backend)
         self.gateway = Mock()
-        self.gateway.complete.return_value = ({"tool": "design_floor_system", "parameters": PARAMETERS}, {})
+        self.gateway.complete.return_value = (floor_proposal(), {})
         self.parser = ParameterParser(self.registry, self.gateway, [FloorDemoProfile()])
         self.state = AgentState(self.root / "agent")
         self.controller = AgentController(self.registry, self.parser, self.state, [self.workflow])

@@ -8,6 +8,7 @@ import unittest
 
 from examples.demo_acceptance import DemoAcceptance, ROOT, read_json
 from llm import GatewayError
+from tests.semantic_fixtures import floor_proposal
 from tools.floor.cad_adapter import FloorCADError
 
 
@@ -24,7 +25,17 @@ class RecordedGateway:
         spec = read_json(ROOT / "demos/floor_cases.json")
         values = {c["text"]: c["parameters"] for c in spec["cases"]}
         values[spec["probes"][2]["text"]] = {**spec["cases"][0]["parameters"], "span_x": 7200}
-        return {"tool": "design_floor_system", "parameters": copy.deepcopy(values[text])}, {"model": "SIMULATED"}
+        if text == spec["probes"][0]["text"]:
+            parameters = {**spec["cases"][0]["parameters"], "live_load": None}
+            proposal = floor_proposal(parameters)
+        elif text == spec["probes"][1]["text"]:
+            proposal = floor_proposal({**spec["cases"][0]["parameters"], "concrete": "C50"}, concrete="C50", load="2kN/m²")
+        else:
+            parameters = values[text]
+            pair = "7.2m×6m" if text == spec["probes"][2]["text"] else ("5.4m×6m" if parameters["span_x"] == 5400 else "6m×6m")
+            load = "2kN/m²" if text == spec["probes"][2]["text"] else ("3.0kN/m²" if parameters["live_load"] == 3 else "2.0kN/m²")
+            proposal = floor_proposal(parameters, pair=pair, concrete=parameters["concrete"], load=load)
+        return proposal, {"model": "SIMULATED"}
 
 
 class SimulatedCAD:
@@ -68,7 +79,7 @@ class DemoTests(unittest.TestCase):
         self.assertEqual([r["case"] for r in result["runs"]],
             ["missing_load", "unsupported_material", "design_rejection", "A", "B", "C", "cad_timeout", "A", "B", "C"])
         self.assertEqual(len({r["run_id"] for r in result["runs"]}), 10)
-        self.assertEqual(len(self.gateway.calls), 8)
+        self.assertEqual(len(self.gateway.calls), 10)
         self.assertEqual(len(self.backend.calls), 7)
         self.assertEqual(result["checked_files"], 42)
         self.assertTrue(result["previous_artifacts_unchanged"])
@@ -80,7 +91,7 @@ class DemoTests(unittest.TestCase):
         self.gateway.failure = True
         result = self.suite.run()
         self.assertFalse(result["success"])
-        self.assertEqual(len(result["runs"]), 3)
+        self.assertEqual(len(result["runs"]), 1)
         self.assertEqual(len(self.gateway.calls), 1)
         self.assertEqual(self.backend.calls, [])
         self.assertEqual(result["runs"][-1]["errors"][0]["code"], "api_timeout")
