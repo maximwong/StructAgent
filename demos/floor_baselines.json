@@ -1,0 +1,24 @@
+{
+  "_source": "Phase 6 preflight: existing legacy calculation and CAD conversion, fixed Demo inputs; no LLM or desktop CAD.",
+  "A": {
+    "design_sha256": "2df9a0a4039145d7eeed5b48f71d1aa9fd9375122dd5fa5b46fc5edc32971bf4",
+    "scene_sha256": "e6d4f2e9cb98329caa17815f819852b1589cce54870be427ad9b24735780f7e1",
+    "entities": 2305,
+    "texts": 356,
+    "dimensions": 218
+  },
+  "B": {
+    "design_sha256": "a6e1cdcf0d605839c14a0051f5b62feaaa3d5d2a563ccce560d3ea9960d14b1b",
+    "scene_sha256": "9f4f690ad37dca789b7dbc8c0e718ec42512d536121bf89b6c0bdc9e5068bb93",
+    "entities": 2287,
+    "texts": 356,
+    "dimensions": 218
+  },
+  "C": {
+    "design_sha256": "45080ad61ad4fa11501a2da9ee617dca1a280d443aec9f5522613c4af8a8a100",
+    "scene_sha256": "b266aecc467c62d0ebcdc609dec8a298fa8f7ae735d0a9efaf6e20ab61eb6e0c",
+    "entities": 2316,
+    "texts": 356,
+    "dimensions": 218
+  }
+}

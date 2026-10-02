@@ -1,0 +1,14 @@
+{
+  "project_id": "CSU-DEMO-001",
+  "profile": "office_floor_demo_v1",
+  "cases": [
+    {"id": "A", "text": "设计一个6m×6m柱网的办公楼单向板肋梁楼盖，采用C30和HRB400，活荷载2.0kN/m²。", "parameters": {"span_x": 6000, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.0}},
+    {"id": "B", "text": "设计一个5.4m×6m柱网的办公楼单向板肋梁楼盖，采用C30和HRB400，活荷载2.0kN/m²。", "parameters": {"span_x": 5400, "span_y": 6000, "concrete": "C30", "steel": "HRB400", "live_load": 2.0}},
+    {"id": "C", "text": "设计一个6m×6m柱网的办公楼单向板肋梁楼盖，采用C35和HRB400，活荷载3.0kN/m²。", "parameters": {"span_x": 6000, "span_y": 6000, "concrete": "C35", "steel": "HRB400", "live_load": 3.0}}
+  ],
+  "probes": [
+    {"id": "missing_load", "text": "设计6m×6m柱网的办公楼楼盖，C30，梁纵筋HRB400。", "expected_status": "needs_input", "expected_calls": 0, "error": "missing_parameter"},
+    {"id": "unsupported_material", "text": "设计6m×6m柱网的办公楼楼盖，C50，梁纵筋HRB400，活荷载2kN/m²。", "expected_status": "invalid_input", "expected_calls": 0},
+    {"id": "design_rejection", "text": "设计7.2m×6m柱网的办公楼楼盖，C30，梁纵筋HRB400，活荷载2kN/m²。", "expected_status": "failed", "expected_calls": 1, "error": "design_rejected"}
+  ]
+}
