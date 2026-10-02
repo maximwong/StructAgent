@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="structagent-token" content="__SESSION_TOKEN__">
+  <title>StructAgent · 结构设计助手</title>
+  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+</head>
+<body>
+<header><div class="brand">SA</div><div><h1>StructAgent</h1><p>结构设计助手 · 本机演示版</p></div><span id="connection" class="tag">连接中</span></header>
+<main>
+  <section class="card input-card" aria-labelledby="request-title">
+    <h2 id="request-title">描述你的设计要求</h2><p class="muted">直接输入自然语言，无需命令、引号或固定句式。</p>
+    <form id="design-form">
+      <label for="project-name">项目名称</label><input id="project-name" maxlength="80" value="办公楼演示项目" required>
+      <label for="request">设计要求</label><textarea id="request" maxlength="4000" rows="7" required placeholder="例如：算一下办公楼楼盖，主梁方向跨6米、次梁方向跨6米，混凝土C30、梁纵筋HRB400，活载按每平方米2.8千牛考虑。"></textarea>
+      <div class="examples"><span>填入案例</span><button type="button" data-case="A">A · 6m柱网</button><button type="button" data-case="B">B · 5.4m柱网</button><button type="button" data-case="C">C · C35 / 活载3.0</button></div>
+      <div class="template"><label class="check"><input type="checkbox" id="template-confirmed"><span>使用办公楼单向板肋梁楼盖演示模板</span></label><p>主梁3跨、次梁5跨；板厚80mm；次梁200×400mm、主梁250×600mm；次梁间距为主梁轴跨的1/3。板筋及箍筋HPB300，恒载与支承沿用已确认模板。</p></div>
+      <button id="start" class="primary" type="submit">开始设计</button><p id="config" class="muted small"></p>
+    </form>
+    <div id="notice" role="alert" hidden></div>
+    <details><summary>使用说明</summary><p>先打开并保持AutoCAD空闲。首次使用按本机部署说明配置API和CAD脚本。结果需要工程人员复核，当前采用已确认的教学演示模型。</p><p>关闭或刷新网页不会取消正在执行的任务。每次开始都会保存为新的运行记录。</p></details>
+    <label for="history">最近运行</label><select id="history"><option value="">暂无运行记录</option></select>
+    <div class="utilities"><button id="recover" type="button">检查并恢复CAD</button><button id="stop" type="button">退出程序</button></div>
+  </section>
+  <section class="results" aria-labelledby="result-title">
+    <div class="card"><div class="row"><div><h2 id="result-title">设计进度</h2><p id="job-title" class="muted">填写要求后开始设计</p></div><span id="status" class="tag">等待开始</span></div>
+      <ol class="steps"><li id="step-parse"><b>1</b><span>理解与校验</span><small>等待</small></li><li id="step-design"><b>2</b><span>楼盖设计</span><small>等待</small></li><li id="step-cad"><b>3</b><span>CAD出图</span><small>等待</small></li></ol>
+      <div id="issues" aria-live="polite"></div>
+    </div>
+    <div class="card"><h2>解析参数</h2><p id="parameter-empty" class="muted">参数确认后将显示数值及原文依据。</p><table id="parameters" hidden><thead><tr><th>参数</th><th>数值</th><th>原文依据</th></tr></thead><tbody></tbody></table></div>
+    <div class="card"><div class="row"><h2>设计与图纸</h2><button id="open-cad" class="primary compact" disabled>打开CAD图纸</button></div><p id="design-summary" class="muted">尚未完成计算</p><p id="cad-status">尚未生成图纸</p><p id="drawing-path" class="small path"></p><details id="warning-box" hidden><summary>设计提示与校核警告</summary><ul id="warnings"></ul></details></div>
+    <div class="card"><h2>工具调用日志</h2><ul id="tool-log" class="log"><li class="muted">暂无工具调用</li></ul><p id="run-id" class="small muted"></p></div>
+  </section>
+</main>
+<footer>本机计算与绘图 · 参数由云端模型解析 · 每次运行独立保存</footer>
+</body></html>
