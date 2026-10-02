@@ -12,6 +12,7 @@ from config import ConfigurationError, load_settings
 from core import ToolRegistry
 from llm import DeepSeekGateway
 from tools.floor.language_profile import FloorDemoProfile
+from tools.floor.explicit_profile import FloorExplicitProfile
 from tools.floor.plugin import register_floor_workflow
 
 
@@ -22,7 +23,9 @@ def main():
     source.add_argument("--text")
     source.add_argument("--text-file", type=Path)
     source.add_argument("--status", metavar="RUN_ID", help="读取既有运行状态；不调用API或CAD。")
-    parser.add_argument("--template", choices=("office_floor_demo_v1",))
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--template", choices=("office_floor_demo_v1",))
+    mode.add_argument("--model-file", type=Path, help="完整工程参数JSON；无需选择演示模板。")
     parser.add_argument("--project-id", default="CSU-DEMO-001")
     parser.add_argument("--output-root", type=Path, default=Path(__file__).resolve().parents[1] / "data/projects")
     parser.add_argument("--cad-timeout", type=float, default=240)
@@ -34,13 +37,15 @@ def main():
         else:
             settings = load_settings()
             text = args.text_file.read_text(encoding="utf-8-sig") if args.text_file else args.text
-            if settings.api_key in text or settings.api_key in args.project_id:
+            model = json.loads(args.model_file.read_text(encoding="utf-8-sig")) if args.model_file else None
+            if settings.api_key in text or settings.api_key in args.project_id or settings.api_key in json.dumps(model, ensure_ascii=False):
                 raise ConfigurationError("Remove the API key from the design input or project identity.")
             registry = ToolRegistry()
             workflow = register_floor_workflow(registry, args.output_root, cad_timeout=args.cad_timeout)
-            parameter_parser = ParameterParser(registry, DeepSeekGateway(settings), [FloorDemoProfile()])
+            profiles = [FloorExplicitProfile(model)] if args.model_file else [FloorDemoProfile()]
+            parameter_parser = ParameterParser(registry, DeepSeekGateway(settings), profiles)
             controller = AgentController(registry, parameter_parser, state, [workflow])
-            result = controller.run(text, project_id=args.project_id, profile_name=args.template)
+            result = controller.run(text, project_id=args.project_id, profile_name="floor_explicit_v1" if args.model_file else args.template)
     except (ConfigurationError, OSError, ValueError, KeyError) as exc:
         message = str(exc) if isinstance(exc, ConfigurationError) else "Cannot initialize workflow or read requested input/status."
         result = {"success": False, "status": "error", "errors": [{"code": "setup_failed", "message": message}]}

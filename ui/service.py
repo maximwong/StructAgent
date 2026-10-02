@@ -11,6 +11,8 @@ from uuid import uuid4
 
 from agent.state import AgentState
 from core.persistence import write_json
+from core.validation import ensure_json
+from core.exceptions import ToolValidationError
 
 
 class UIError(ValueError):
@@ -20,12 +22,14 @@ class UIError(ValueError):
 
 
 class RunService:
-    def __init__(self, root, controller_factory, *, settings_check, recover, opener=None):
+    def __init__(self, root, controller_factory, *, settings_check, recover, opener=None,
+                 explicit_controller_factory=None, input_form=None):
         self.root = Path(root).resolve()
         self.jobs = self.root / "ui" / "jobs"
         self.jobs.mkdir(parents=True, exist_ok=True)
         self.state = AgentState(self.root / "agent")
         self.controller_factory = controller_factory
+        self.explicit_controller_factory, self.input_form = explicit_controller_factory, input_form
         self.settings_check, self.recover = settings_check, recover
         self.opener = opener or os.startfile
         self.lock = threading.RLock()
@@ -64,27 +68,37 @@ class RunService:
             raise UIError("同一输出目录还有正在执行的任务，请等待原任务结束。", 409)
 
     def start(self, payload):
-        if not isinstance(payload, dict) or set(payload) != {"project_name", "text", "template_confirmed"}:
-            raise UIError("请填写项目名称、设计要求并确认演示模板。")
+        explicit = isinstance(payload, dict) and payload.get("input_mode") == "explicit"
+        expected = {"project_name", "text", "input_mode", "model"} if explicit else {"project_name", "text", "template_confirmed"}
+        if not isinstance(payload, dict) or set(payload) != expected:
+            raise UIError("请提供项目名称、设计要求和完整工程参数。" if explicit else "请填写项目名称、设计要求并确认演示模板。")
+        if explicit and self.explicit_controller_factory is None:
+            raise UIError("本机尚未启用完整参数模式。")
         name, text = payload["project_name"], payload["text"]
         if not isinstance(name, str) or not 1 <= len(name.strip()) <= 80:
             raise UIError("项目名称请填写1至80个字符。")
         if not isinstance(text, str) or not 1 <= len(text.strip()) <= 4000:
             raise UIError("设计要求请填写1至4000个字符。")
-        if payload["template_confirmed"] is not True:
+        if not explicit and payload["template_confirmed"] is not True:
             raise UIError("请先确认使用办公楼演示模板。")
+        try:
+            ensure_json(payload)
+        except ToolValidationError:
+            raise UIError("完整参数必须为有限数值和标准JSON数据。") from None
         try:
             settings = self.settings_check()
         except ValueError:
             raise UIError(self.configuration()["message"]) from None
-        if settings.api_key in text or settings.api_key in name:
+        if settings.api_key in json.dumps(payload, ensure_ascii=False):
             raise UIError("设计要求和项目名称中不能包含API密钥，请删除后提交。")
         with self.lock:
             self._ensure_idle()
             job_id = uuid4().hex
             record = {"id": job_id, "project_name": name.strip(), "text": text.strip(),
                       "project_id": name.strip() + "-" + job_id[:8], "created": time.time(),
-                      "profile": "office_floor_demo_v1"}
+                      "profile": "floor_explicit_v1" if explicit else "office_floor_demo_v1"}
+            if explicit:
+                record["model"] = deepcopy(payload["model"])
             write_json(self._path(job_id), record, exclusive=True)
             self.active = job_id
             self.thread = threading.Thread(target=self._run, args=(record,), name="structagent-workflow", daemon=False)
@@ -97,7 +111,8 @@ class RunService:
 
     def _run(self, record):
         try:
-            controller = self.controller_factory(self.root)
+            controller = (self.explicit_controller_factory(self.root, deepcopy(record["model"]))
+                          if record["profile"] == "floor_explicit_v1" else self.controller_factory(self.root))
             result = controller.run(record["text"], project_id=record["project_id"], profile_name=record["profile"])
         except Exception:
             result = {"success": False, "status": "error", "errors": [

@@ -14,7 +14,7 @@ async function api(path, method="GET", data) {
 }
 function notice(text) { $("notice").textContent=text; $("notice").hidden=!text; }
 function controls() {
-  $("start").disabled = busy || pending || !ready || !$("template-confirmed").checked;
+  $("start").disabled = busy || pending || !ready || ($("input-mode").value==="template"&&!$("template-confirmed").checked);
   $("start").textContent = busy ? "任务执行中…" : "开始设计";
   $("recover").disabled = busy || pending || stopped;
   $("stop").disabled = busy || pending || stopped;
@@ -27,13 +27,15 @@ function render(job) {
   $("status").textContent=labels[status] || "状态待检查";$("status").className="tag "+status;
   Object.keys(steps).forEach(key=>{const value=(s.steps||{})[key]||(["running","queued"].includes(status)?"pending":"skipped"),el=$("step-"+key);el.className=value;el.querySelector("small").textContent=labels[value]||value;});
   $("issues").replaceChildren();
-  (s.errors||[]).forEach(error=>{const box=node("div","","issue");box.append(node("p",errorMessages[error.code]||error.message||"请检查本次输入。"));if(error.quote)box.append(node("p","原文："+error.quote,"quote"));$("issues").append(box);});
+  (s.errors||[]).forEach(error=>{const box=node("div","","issue");const path=error.path||[],field=path[1]==="model"?path.slice(2).join("."):"";box.append(node("p",error.code==="missing_parameter"&&field?"请补充："+FullInput.displayPath(field):errorMessages[error.code]||error.message||"请检查本次输入。"));if(error.quote)box.append(node("p","原文："+error.quote,"quote"));$("issues").append(box);});
   if(status==="interrupted" && !(s.errors||[]).length) $("issues").append(node("p","原任务已中断，请检查CAD状态后重新开始。","issue"));
   const parsed=s.parse_result||{}, p=(parsed.envelope||{}).parameters, evidence=parsed.source_evidence||{};
   $("parameters").hidden=!p;$("parameter-empty").hidden=!!p;
+  $("parameters").classList.toggle("full-model",p?.input_mode==="explicit");
   $("parameter-empty").textContent=status==="needs_input"?"请根据上方提示补充设计要求后重新开始。":"参数确认后将显示数值及原文依据。";
   const tbody=$("parameters").querySelector("tbody");tbody.replaceChildren();
-  if(p) for(const [key,label,unit] of [["span_x","主梁轴跨"," mm"],["span_y","次梁轴跨"," mm"],["concrete","混凝土",""],["steel","梁纵筋",""],["live_load","活荷载"," kN/m²"]]) {
+  if(p?.input_mode==="explicit") {function show(value,prefix=""){for(const [key,item] of Object.entries(value)){const path=prefix?prefix+"."+key:key;if(item&&typeof item==="object"&&!Array.isArray(item))show(item,path);else{const row=document.createElement("tr");const source=evidence[path]||{};row.append(node("td",FullInput.displayPath(path)),node("td",Array.isArray(item)?item.join(", "):String(item)),node("td",source.quote||source.source||"工程参数表"));tbody.append(row);}}}show(p.model);}
+  else if(p) for(const [key,label,unit] of [["span_x","主梁轴跨"," mm"],["span_y","次梁轴跨"," mm"],["concrete","混凝土",""],["steel","梁纵筋",""],["live_load","活荷载"," kN/m²"]]) {
     const row=document.createElement("tr");row.append(node("td",label),node("td",String(p[key])+unit),node("td",evidence[key]?.quote||"—"));tbody.append(row);
   }
   $("design-summary").textContent=job.summary?`已完成板、次梁、主梁设计及已有校核；共 ${job.summary.reinforcement_items} 项钢筋明细。`:"尚未完成计算";
@@ -53,20 +55,23 @@ async function refresh() {
   if(!data.jobs.length){const option=node("option","暂无运行记录");option.value="";history.append(option);}
   for(const job of data.jobs){const option=node("option",job.project_name+" · "+new Date(job.created*1000).toLocaleString());option.value=job.id;history.append(option);}
   if(!current && data.jobs.length) current=data.active&&data.active!=="recovery"?data.active:data.jobs[0].id;
-  if(current){history.value=current;const job=await api("/api/jobs/"+current);render(job);if(!hydrated){if(!$("request").value.trim()){$("project-name").value=job.project_name;$("request").value=job.text;}hydrated=true;}}
+  if(current){history.value=current;const job=await api("/api/jobs/"+current);render(job);if(!hydrated){if(!$("request").value.trim()){restoreInput(job);}hydrated=true;}}
   if(data.recovery){const value=JSON.stringify(data.recovery);if(value!==lastRecovery){notice(data.recovery.message);lastRecovery=value;}}
   controls();
 }
 $("design-form").addEventListener("submit",async event=>{
   event.preventDefault();if(pending||busy)return;pending=true;notice("");controls();
-  try{const job=await api("/api/jobs","POST",{project_name:$("project-name").value,text:$("request").value,template_confirmed:$("template-confirmed").checked});current=job.id;await refresh();}
+  try{const payload={project_name:$("project-name").value,text:$("request").value};if($("input-mode").value==="explicit"){payload.input_mode="explicit";payload.model=FullInput.collect();}else{payload.template_confirmed=$("template-confirmed").checked;}const job=await api("/api/jobs","POST",payload);current=job.id;await refresh();}
   catch(error){notice(error.message);}finally{pending=false;controls();}
 });
 document.querySelectorAll("[data-case]").forEach(button=>button.addEventListener("click",()=>{$("request").value=cases[button.dataset.case];$("request").focus();}));
 $("template-confirmed").addEventListener("change",controls);
-$("history").addEventListener("change",async()=>{current=$("history").value;try{const job=await api("/api/jobs/"+current);$("project-name").value=job.project_name;$("request").value=job.text;render(job);}catch(error){notice(error.message);}});
+function changeMode(){$("template-panel").hidden=$("input-mode").value!=="template";$("full-input-panel").hidden=$("input-mode").value!=="explicit";controls();}
+function restoreInput(job){$("project-name").value=job.project_name;$("request").value=job.text;$("input-mode").value=job.profile==="floor_explicit_v1"?"explicit":"template";if(job.model)FullInput.load(job.model);changeMode();}
+$("input-mode").addEventListener("change",changeMode);
+$("history").addEventListener("change",async()=>{current=$("history").value;try{const job=await api("/api/jobs/"+current);restoreInput(job);render(job);}catch(error){notice(error.message);}});
 $("open-cad").addEventListener("click",async()=>{try{await api("/api/jobs/"+current+"/open-cad","POST",{});notice("已请求用本机AutoCAD打开图纸。");}catch(error){notice(error.message);}});
 $("recover").addEventListener("click",async()=>{pending=true;controls();try{await api("/api/recover","POST",{});await refresh();}catch(error){notice(error.message);}finally{pending=false;controls();}});
 $("stop").addEventListener("click",async()=>{try{await api("/api/stop","POST",{});stopped=true;ready=false;controls();$("connection").textContent="程序已退出";notice("程序已退出，可以关闭此页面。下次双击启动文件即可重新打开。");}catch(error){notice(error.message);}});
 async function poll(){if(stopped)return;try{await refresh();}catch(error){$("connection").textContent="连接中断";ready=false;controls();notice("无法连接本机程序。请重新打开StructAgent并刷新页面，原任务不会自动重做。");}finally{if(!stopped)setTimeout(poll,1200);}}
-poll();
+FullInput.initialize(()=>api("/api/input-form"),notice).then(poll).catch(error=>notice("完整参数表初始化失败，请刷新或重新启动程序。"));

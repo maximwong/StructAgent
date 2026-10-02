@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="structagent-token" content="__SESSION_TOKEN__">
   <title>StructAgent · 结构设计助手</title>
-  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/style.css"><script src="/full-input.js" defer></script><script src="/app.js" defer></script>
 </head>
 <body>
 <header><div class="brand">SA</div><div><h1>StructAgent</h1><p>结构设计助手 · 本机演示版</p></div><span id="connection" class="tag">连接中</span></header>
@@ -13,9 +13,11 @@
     <h2 id="request-title">描述你的设计要求</h2><p class="muted">直接输入自然语言，无需命令、引号或固定句式。</p>
     <form id="design-form">
       <label for="project-name">项目名称</label><input id="project-name" maxlength="80" value="办公楼演示项目" required>
+      <label for="input-mode">工程参数来源</label><select id="input-mode"><option value="template">已确认的办公楼演示模板</option><option value="explicit">完整工程参数（不使用模板）</option></select>
       <label for="request">设计要求</label><textarea id="request" maxlength="4000" rows="7" required placeholder="例如：算一下办公楼楼盖，主梁方向跨6米、次梁方向跨6米，混凝土C30、梁纵筋HRB400，活载按每平方米2.8千牛考虑。"></textarea>
       <div class="examples"><span>填入案例</span><button type="button" data-case="A">A · 6m柱网</button><button type="button" data-case="B">B · 5.4m柱网</button><button type="button" data-case="C">C · C35 / 活载3.0</button></div>
-      <div class="template"><label class="check"><input type="checkbox" id="template-confirmed"><span>使用办公楼单向板肋梁楼盖演示模板</span></label><p>主梁3跨、次梁5跨；板厚80mm；次梁200×400mm、主梁250×600mm；次梁间距为主梁轴跨的1/3。板筋及箍筋HPB300，恒载与支承沿用已确认模板。</p></div>
+      <div class="template" id="template-panel"><label class="check"><input type="checkbox" id="template-confirmed"><span>使用办公楼单向板肋梁楼盖演示模板</span></label><p>主梁3跨、次梁5跨；板厚80mm；次梁200×400mm、主梁250×600mm；次梁间距为主梁轴跨的1/3。板筋及箍筋HPB300，恒载与支承沿用已确认模板。</p></div>
+      <div id="full-input-panel" hidden><p class="muted small">填写或导入完整参数。可直接说“按表单设计”，也可描述板厚、梁截面等修改；缺项会明确提示，程序不会猜测。</p><div class="examples"><button id="load-input-example" type="button">载入已验证案例作为起点</button><button id="clear-full-input" type="button">清空参数</button></div><label for="import-model">导入工程参数文件</label><input id="import-model" type="file" accept=".json,application/json"><p id="full-input-notice" class="small muted"></p><div id="full-input-fields"></div></div>
       <button id="start" class="primary" type="submit">开始设计</button><p id="config" class="muted small"></p>
     </form>
     <div id="notice" role="alert" hidden></div>
@@ -28,7 +30,7 @@
       <ol class="steps"><li id="step-parse"><b>1</b><span>理解与校验</span><small>等待</small></li><li id="step-design"><b>2</b><span>楼盖设计</span><small>等待</small></li><li id="step-cad"><b>3</b><span>CAD出图</span><small>等待</small></li></ol>
       <div id="issues" aria-live="polite"></div>
     </div>
-    <div class="card"><h2>解析参数</h2><p id="parameter-empty" class="muted">参数确认后将显示数值及原文依据。</p><table id="parameters" hidden><thead><tr><th>参数</th><th>数值</th><th>原文依据</th></tr></thead><tbody></tbody></table></div>
+    <div class="card"><h2>解析参数</h2><p id="parameter-empty" class="muted">参数确认后将显示数值及原文依据。</p><div class="parameter-table"><table id="parameters" hidden><thead><tr><th>参数</th><th>数值</th><th>原文依据</th></tr></thead><tbody></tbody></table></div></div>
     <div class="card"><div class="row"><h2>设计与图纸</h2><button id="open-cad" class="primary compact" disabled>打开CAD图纸</button></div><p id="design-summary" class="muted">尚未完成计算</p><p id="cad-status">尚未生成图纸</p><p id="drawing-path" class="small path"></p><details id="warning-box" hidden><summary>设计提示与校核警告</summary><ul id="warnings"></ul></details></div>
     <div class="card"><h2>工具调用日志</h2><ul id="tool-log" class="log"><li class="muted">暂无工具调用</li></ul><p id="run-id" class="small muted"></p></div>
   </section>

@@ -1,10 +1,12 @@
 # StructAgent
 
-StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-demo`为阶段8冻结版本**，本机浏览器界面通过既有Controller与Registry完成自然语言解析、楼盖设计和CAD出图。界面实机A/B/C两轮6/6通过保存重开与基线核对；版本范围、固定部署和后续开发规则见[冻结说明](docs/releases/v0.1-demo.md)。
+StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-demo`为阶段8冻结版本，本开发分支为`v0.2-dev`**。本机浏览器界面通过既有Controller与Registry完成自然语言解析、楼盖设计和CAD出图。冻结版界面实机A/B/C两轮6/6通过保存重开与基线核对；版本范围、固定部署和后续开发规则见[冻结说明](docs/releases/v0.1-demo.md)。
 
 新设备演示请使用`git clone --branch v0.1-demo --single-branch https://github.com/maximwong/StructAgent.git`，再按部署说明配置环境和本机API。`main`与开发分支不作为已冻结版本的替代；后续功能在新分支开发，不移动此标签。
 
 本机环境已配置后，双击根目录的 **`启动StructAgent.cmd`**，填写自然语言要求、确认演示模板并点击“开始设计”。界面显示参数依据、执行进度、设计摘要、工具日志及“打开CAD图纸”按钮。见 [界面使用说明](docs/demo-ui.md) 和 [阶段7报告](docs/stages/phase-7.md)。
+
+本开发分支新增“完整工程参数（不使用模板）”：填写或导入参数，可直接说“按表单设计”，也可修改板厚、梁截面等13项参数；无需勾选模板。缺项明确提示，完整表单不会隐式填入案例。主梁3跨、次梁5跨等旧引擎边界仍保留。见[使用说明](docs/explicit-floor-input.md)与[本阶段报告](docs/stages/phase-9.md)。切换分支后需退出并重新启动旧UI服务。
 
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
@@ -22,7 +24,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
 - `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态。
 - `app.py`、`ui/`：本机浏览器界面、后台工作流执行、历史记录及受控恢复/打开图纸，无新增依赖。
-- `examples/`、`tests/`：可运行示例及187项核心、设计、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
+- `examples/`、`tests/`：可运行示例及204项核心、设计、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
 - `demos/`：A/B/C自然语言、预期参数及已冻结的完整设计/CAD场景基线。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
@@ -97,7 +99,7 @@ python -m examples.agent_workflow --template office_floor_demo_v1 --text "设计
 
 ## 协作方向
 
-下一步为阶段6：固定“一句话出图”演示入口与案例，连续验证真实LLM、Controller及CAD链路。Controller只依赖Registry、Schema、ToolResult和Project State；新增专业能力通过注册工具、语言配置及工作流接入。
+阶段8已冻结稳定Demo；本分支完成v0.2完整输入与缺参交互第一步，下一步接入独立校核Tool。Controller只依赖Registry、Schema、ToolResult和Project State；新增专业能力通过注册工具、语言配置及工作流接入。
 
 请通过 Issue 记录任务，使用独立分支和 Pull Request 提交修改，在PR中说明影响范围、验证命令和结果。工程算法变更需要给出样例对比和必要的校核依据。参见 [协作指南](CONTRIBUTING.md)。
 
