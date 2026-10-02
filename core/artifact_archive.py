@@ -53,8 +53,14 @@ class ArtifactArchive:
             metadata = result.get("metadata", {})
             if not metadata.get("run_directory"):
                 continue
-            directory = Path(metadata["run_directory"])
+            candidate = Path(metadata["run_directory"])
+            directory = candidate.resolve()  # Windows may report the same directory using an 8.3 alias.
             relative = directory.relative_to(self.root).as_posix()
+            for ancestor in (candidate, *candidate.parents):
+                if ancestor.resolve() == self.root:
+                    break
+                if ancestor.is_symlink() or ancestor.is_junction():
+                    raise ValueError("Artifact paths must not use links.")
             directory = self._path(relative)
             tool_run = metadata.get("run_id")
             if directory.name != tool_run or not re.fullmatch(r"[0-9a-f]{32}", tool_run or ""):
