@@ -204,7 +204,8 @@ class UITests(UIFixture):
         self.assertTrue(result["snapshot"]["success"], result)
         self.assertEqual(result["snapshot"]["parse_result"]["envelope"]["parameters"]["live_load"], 2.0)
         self.assertTrue(result["summary"]["reinforcement_items"] > 0)
-        self.assertEqual(len(result["snapshot"]["tool_calls"]), 2)
+        self.assertEqual(len(result["snapshot"]["tool_calls"]), 3)
+        self.assertEqual(result['check']['status'], 'PASS')
 
 
 class HTTPTests(UIFixture):

@@ -156,7 +156,7 @@ class RunService:
             record = self._record(job_id)
             snapshot = self._snapshot(record)
             summary = self._summary(snapshot)
-            return {**record, "snapshot": snapshot, "summary": summary,
+            return {**record, "snapshot": snapshot, "summary": summary, "check": self._check_summary(snapshot),
                     "can_open": snapshot.get("success") is True and self.active is None and self._drawing(snapshot) is not None}
 
     def status(self):
@@ -239,3 +239,18 @@ class RunService:
         with self.lock:
             self._ensure_idle()
             self.stopping = True
+
+    def _check_summary(self, snapshot):
+        for call in snapshot.get("tool_calls", []):
+            if call.get("tool") != "check_floor_design" or not call.get("result_path"):
+                continue
+            path = Path(call["result_path"]).resolve()
+            if not path.is_relative_to(self.root) or not path.is_file():
+                return None
+            try:
+                result = json.loads(path.read_text(encoding="utf-8"))["result"]
+                if result.get("status") in ("PASS", "FAIL"):
+                    return {key: result[key] for key in ("status", "summary", "coverage", "checks")}
+            except (OSError,ValueError,KeyError,TypeError):
+                return None
+        return None

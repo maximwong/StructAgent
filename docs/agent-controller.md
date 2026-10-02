@@ -14,7 +14,7 @@ Controller接收自然语言及显式模板选择，调用参数解析器，再�
 
 可用 `--text-file request.txt` 读取UTF-8要求。默认输出根目录为仓库下 `data/projects/`；`--output-root` 可指定独立验证目录。每次调用生成不同的run_id、设计引用、结果文件和CAD目录，不覆盖先前运行。
 
-成功时返回 `success: true`、`status: completed`，`steps.parse/design/cad`均为completed，`artifacts`包含DWG与验证回执路径。Controller只有收到有效ToolResult并持久保存结果后才完成步骤；解析ready不代表整个设计出图完成。
+成功时返回 `success: true`、`status: completed`；当前v0.2楼盖插件声明`steps.parse/design/check/cad`四步均为completed，`artifacts`包含DWG与验证回执路径。Controller只有收到有效ToolResult并持久保存结果后才完成步骤；解析ready不代表整个设计出图完成。独立校核FAIL返回success=false，由通用停止逻辑跳过CAD，Controller无需改动。见[校核Tool](floor-check-tool.md)。
 
 用返回的run_id查看状态（自定义输出根目录时传相同的 `--output-root`）：
 

@@ -2,7 +2,8 @@
 const $ = id => document.getElementById(id);
 const token = document.querySelector('meta[name="structagent-token"]').content;
 const labels = {queued:"准备中",running:"执行中",completed:"已完成",needs_input:"请补充要求",failed:"执行未完成",error:"执行未完成",invalid_input:"请检查参数",invalid_output:"解析未通过校验",interrupted:"运行已中断",recovery_required:"CAD需要恢复",pending:"等待",skipped:"未执行"};
-const steps = {parse:"理解与校验",design:"楼盖设计",cad:"CAD出图"};
+const steps = {parse:"理解与校验",design:"楼盖设计",check:"独立校核",cad:"CAD出图"};
+const memberNames = {slab:"板",secondary:"次梁",main:"主梁"};
 const cases = {A:"设计一个6m×6m柱网的办公楼单向板肋梁楼盖，采用C30和HRB400，活荷载2.0kN/m²。",B:"设计一个5.4m×6m柱网的办公楼单向板肋梁楼盖，采用C30和HRB400，活荷载2.0kN/m²。",C:"设计一个6m×6m柱网的办公楼单向板肋梁楼盖，采用C35和HRB400，活荷载3.0kN/m²。"};
 const errorMessages = {cad_unavailable:"未连接到AutoCAD 2022。请打开AutoCAD，处理启动提示后重新开始。",cad_busy:"AutoCAD正在执行其他命令。请结束该命令，保持空闲后重新开始。",cad_start_failed:"无法启动CAD连接程序，请检查本机部署。",cad_receipt_invalid:"图纸未通过完成核验，请保留记录并检查CAD状态。",api_timeout:"模型响应超时，请稍后重新开始；本次没有继续计算或出图。",api_authentication_failed:"API密钥未通过验证，请检查本机配置。",api_balance_insufficient:"API账户余额不足，请检查账户后重新开始。",api_rate_limited:"API请求受限，请稍后重新开始。",api_connection_failed:"无法连接模型服务，请检查网络后重新开始。",api_invalid_json:"模型回复格式未通过校验，本次没有继续计算或出图。",api_incomplete_response:"模型回复不完整，请稍后重新开始。",api_unavailable:"模型服务暂时不可用，请稍后重新开始。",cad_timeout:"CAD绘图超时，请检查AutoCAD状态；需要时点击“检查并恢复CAD”。",cad_recovery_required:"CAD会话需要恢复，请保持AutoCAD打开并点击“检查并恢复CAD”。",owner_exited:"原运行进程已退出。本次不会自动重做，请检查CAD并恢复后重新开始。",source_mismatch:"解析数值与原文依据不一致，本次已停止。请核对要求后重新开始。",workflow_error:"流程执行遇到异常，后续步骤已停止。请保留这次运行记录供检查。"};
 let current = null, busy = false, pending = false, stopped = false, ready = false, hydrated = false, lastRecovery = "";
@@ -39,6 +40,10 @@ function render(job) {
     const row=document.createElement("tr");row.append(node("td",label),node("td",String(p[key])+unit),node("td",evidence[key]?.quote||"—"));tbody.append(row);
   }
   $("design-summary").textContent=job.summary?`已完成板、次梁、主梁设计及已有校核；共 ${job.summary.reinforcement_items} 项钢筋明细。`:"尚未完成计算";
+  const checked=job.check;
+  $("check-summary").textContent=checked?`独立校核 ${checked.status}：${checked.summary.passed}/${checked.summary.total} 项通过（含数据一致性检查）。`:"尚未完成独立校核";
+  $("check-details").hidden=!checked;$("check-rows").replaceChildren();
+  if(checked){$("check-coverage").textContent=checked.coverage.demand_source+" 未独立复核："+checked.coverage.not_checked.join("；")+"。";for(const item of checked.checks){const row=document.createElement("tr");row.append(node("td",`${memberNames[item.member]}截面${item.section+1} · ${item.label}`),node("td",`${Number(item.actual.toPrecision(7))} ${item.relation} ${Number(item.limit.toPrecision(7))} ${item.unit}`),node("td",item.passed?"通过":"未通过"));$("check-rows").append(row);}}
   const cad=(s.steps||{}).cad;
   $("cad-status").textContent=s.success?"图纸已保存，并完成重开与图元核验。":cad==="running"?"正在生成并验证CAD图纸，请保持AutoCAD空闲。":cad==="failed"||status==="recovery_required"?"本次CAD未确认完成，请查看上方提示。":"尚未生成图纸";
   const drawing=(s.artifacts||[]).find(a=>a.type==="dwg");$("drawing-path").textContent=drawing?.path||"";

@@ -8,6 +8,7 @@
 - 不把自然语言模型的原始文本送进工程计算；必须经过结构化解析和参数校验。缺少关键工程参数时明确报告。
 - 通用参数解析器不导入楼盖脚本；专业语义契约与证据检查由Tool所属LanguageProfile提供。模板模式提取五项参数；v0.2完整模式使用用户表单和13项有逐字证据的自然语言修改，缺项在云调用前返回。表单描述由专业插件依据既有Schema提供。不能隐式填入模板、不猜单位/缺参、不忽略额外要求；ready仅表示输入契约通过，结构适用范围仍由设计工具校核，Controller保持通用。见 `docs/deepseek-integration.md` 和 `docs/explicit-floor-input.md`。
 - Controller使用应用声明的Workflow和ResultBinding，不能执行LLM生成的流程或表达式。专业注册与步骤绑定放在 `tools/<专业>/plugin.py`；任何步骤失败必须停止后续工具，外部工具明确返回布尔metadata.recovery_required。每次重试生成新run_id，禁止自动重放未知完成状态的CAD步骤。见 `docs/agent-controller.md`。
+- 楼盖工作流已增加`check_floor_design`关口：只读已存设计，用实配钢筋和既有纯函数复核截面/抗剪约束，不能调用设计入口重新选筋后冒充原方案通过。FAIL使用success=false停止CAD，保留逐项依据和未覆盖范围；独立内力、全项验算及自动改参尚未实现。见 `docs/floor-check-tool.md`。
 - 不提交密钥、个人路径、客户工程文件、生成图纸、验证日志或CAD临时文件。公开仓库中仅放可复用源码、匿名样例和测试。
 - 新Tool继承 `core.EngineeringTool`，实现 `_execute`；沿用基类 `execute` 的输入与输出校验。完整Envelope及结果规范见 `docs/tool-core.md`，示例见 `examples/dummy_tool.py`。
 - 楼盖工具使用 `tools/floor/design_tool.py` 和 `design_adapter.py`，通过独立Python进程运行旧引擎。不要把旧引擎目录加入Controller或父进程的全局导入路径。模板必须显式选择；输入/输出约定见 `docs/floor-design-tool.md`。
