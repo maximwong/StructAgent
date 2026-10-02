@@ -1,10 +1,12 @@
 # StructAgent
 
-StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前已完成**阶段5：Engineering Agent Controller**，在显式选择Demo模板后，通过Registry串联自然语言解析、楼盖设计、CAD生成与持久状态。真实DeepSeek → Controller → AutoCAD链路已完成一次保存重开验证；后续继续进行阶段6的重复演示验收。
+StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前已完成**阶段6：一句话出图与连续验收**，在显式选择Demo模板后，通过Registry串联自然语言解析、楼盖设计、CAD生成与持久状态。真实DeepSeek → Controller → AutoCAD链路已完成A/B/C两轮共6次保存重开验证，以及预期失败后恢复；下一步是阶段7最简UI与稳定性测试。
 
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
 阶段5.1已修复材料字段归属和超时诊断，补齐 [历史产物归档](docs/artifact-archive.md) 与 [离线安装和制品哈希](docs/offline-deployment.md)。真实链路、取消/超时及离线新环境验证通过，详见 [修复报告](docs/stages/phase-5.1.md)。
+
+阶段6运行方式见 [一句话Demo](docs/sentence-demo.md)，重复实机结果见 [阶段报告](docs/stages/phase-6.md)。批次摘要记录预期失败和完整基线，不自动重试或覆盖旧结果。
 
 ## 当前可用内容
 
@@ -15,7 +17,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 - `tools/floor/`：楼盖设计/CAD Tool、Adapter、隔离计算与数据转换进程、结果引用及已确认的Demo模板。
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
 - `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态。
-- `examples/`、`tests/`：可运行示例及152项核心、设计、CAD、状态、解析、Controller、归档与部署测试，另有87项旧程序回归。
+- `examples/`、`tests/`：可运行示例及159项核心、设计、CAD、状态、解析、Controller、归档、部署与Demo验收测试，另有87项旧程序回归。
+- `demos/`：A/B/C自然语言、预期参数及已冻结的完整设计/CAD场景基线。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
 阶段0.1关闭了材料名称与强度不一致、布尔值参与工程数值计算、RFALL撤销组异常三项缺陷。原有80项加新增7项自动测试在本机通过。AutoCAD实机验收记录和图纸仅保留在原工作区本地，不包含在公共仓库中。
@@ -23,7 +26,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 ## 在新设备上运行
 
 1. 克隆仓库：`git clone https://github.com/maximwong/StructAgent.git`。
-2. 按 [固定部署说明](docs/demo-deployment.md) 创建Python 3.12.14独立环境，安装 `requirements-demo.txt` 并运行环境检查。后续示例中的 `python` 均指该环境的Python。
+2. 按 [固定部署说明](docs/demo-deployment.md) 创建Python 3.12.14独立环境，以 `requirements-demo.lock` 强制哈希安装并运行环境检查。后续示例中的 `python` 均指该环境的Python。
 3. Windows下运行 `legacy/rc_floor/启动.cmd`。CAD绘图需要本机安装AutoCAD并按现有流程加载 `legacy/rc_floor/RCFLOOR.lsp`。
 4. 在 `legacy/rc_floor/` 目录运行 `python -m unittest discover -s tests -p "test_*.py"` 检查无需CAD的回归测试。
 
