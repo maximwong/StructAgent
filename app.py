@@ -15,17 +15,21 @@ from config import load_settings
 from core import ToolRegistry
 from llm import DeepSeekGateway
 from tools.floor.language_profile import FloorDemoProfile
+from tools.floor.explicit_profile import FloorExplicitProfile
+from tools.floor.input_form import floor_input_form
 from tools.floor.plugin import register_floor_workflow
 from ui.server import LocalServer
 from ui.service import RunService
 
 ROOT = Path(__file__).resolve().parent
+_NO_MODEL = object()
 
 
-def controller_factory(root):
+def controller_factory(root, *, model=_NO_MODEL):
     registry = ToolRegistry()
     workflow = register_floor_workflow(registry, root)
-    parser = ParameterParser(registry, DeepSeekGateway(load_settings()), [FloorDemoProfile()])
+    profiles = [FloorDemoProfile()] if model is _NO_MODEL else [FloorExplicitProfile(model)]
+    parser = ParameterParser(registry, DeepSeekGateway(load_settings()), profiles)
     return AgentController(registry, parser, AgentState(root / "agent"), [workflow])
 
 
@@ -45,7 +49,9 @@ def main():
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error("port must be 1..65535")
-    service = RunService(args.output_root, controller_factory, settings_check=load_settings, recover=recover)
+    service = RunService(args.output_root, controller_factory, settings_check=load_settings, recover=recover,
+                         explicit_controller_factory=lambda root, model: controller_factory(root, model=model),
+                         input_form=floor_input_form)
     try:
         server = LocalServer(service, args.port)
     except OSError:

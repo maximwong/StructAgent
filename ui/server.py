@@ -65,6 +65,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, {"application": "StructAgent", "protocol": 1})
             assets = {"/": ("index.html", "text/html; charset=utf-8"),
                       "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+                      "/full-input.js": ("full-input.js", "text/javascript; charset=utf-8"),
                       "/style.css": ("style.css", "text/css; charset=utf-8")}
             if path in assets:
                 name, content_type = assets[path]
@@ -73,6 +74,8 @@ class Handler(BaseHTTPRequestHandler):
             self._auth()
             if path == "/api/status":
                 return self.reply(200, self.server.service.status())
+            if path == "/api/input-form" and self.server.service.input_form:
+                return self.reply(200, self.server.service.input_form())
             if path.startswith("/api/jobs/"):
                 return self.reply(200, self.server.service.view(path.removeprefix("/api/jobs/")))
             raise UIError("找不到此页面。", 404)
