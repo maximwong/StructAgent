@@ -23,6 +23,7 @@ class ProjectStateStore:
                 run_id TEXT PRIMARY KEY, project_id TEXT NOT NULL, tool TEXT NOT NULL,
                 state TEXT NOT NULL, owner_pid INTEGER NOT NULL, owner_identity TEXT NOT NULL,
                 updated REAL NOT NULL, metadata TEXT NOT NULL)""")
+            connection.execute("CREATE INDEX IF NOT EXISTS executions_state ON executions(state)")
 
     def _connect(self):
         connection = sqlite3.connect(self.path, timeout=10)
@@ -49,19 +50,32 @@ class ProjectStateStore:
             if changed != 1:
                 raise ValueError("Execution state changed or is already final.")
 
-    def list_runs(self, project_id=None):
+    def get(self, run_id):
         with closing(self._connect()) as connection:
-            rows = connection.execute("SELECT * FROM executions ORDER BY updated" if project_id is None
-                                      else "SELECT * FROM executions WHERE project_id=? ORDER BY updated",
-                                      () if project_id is None else (project_id,)).fetchall()
+            row = connection.execute("SELECT * FROM executions WHERE run_id=?", (run_id,)).fetchone()
+        if row is None:
+            raise KeyError("Unknown execution run.")
+        return {**dict(row), "metadata": json.loads(row["metadata"])}
+
+    def list_runs(self, project_id=None, *, state=None):
+        conditions, values = [], []
+        if project_id is not None:
+            conditions.append("project_id=?")
+            values.append(project_id)
+        if state is not None:
+            if state not in STATES:
+                raise ValueError("Unknown execution state.")
+            conditions.append("state=?")
+            values.append(state)
+        with closing(self._connect()) as connection:
+            query = "SELECT * FROM executions" + (" WHERE " + " AND ".join(conditions) if conditions else "")
+            rows = connection.execute(query + " ORDER BY updated", values).fetchall()
         return [{**dict(row), "metadata": json.loads(row["metadata"])} for row in rows]
 
     def reconcile(self):
         """Mark dead/replaced owners; never turn a crashed call into successful CAD."""
         recovered = []
-        for run in self.list_runs():
-            if run["state"] != "RUNNING":
-                continue
+        for run in self.list_runs(state="RUNNING"):
             current = process_identity(run["owner_pid"])
             if current == "unknown" or current == run["owner_identity"]:
                 continue

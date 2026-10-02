@@ -43,8 +43,11 @@ class FloorDemoProfile(LanguageProfile):
         if any(word.casefold() in text.casefold() for word in restricted):
             issue("outside_template_scope", "输入包含模板外的设计/构造要求或修改指令，请明确参数或使用完整工程输入。")
         # Reject nonnumeric changes too: three/five spans are already fixed by template selection.
-        if re.search(r"(?:板筋|箍筋).{0,8}HRB\d+", text, re.I):
+        assign = r"\s*(?:采用|为|取|保留|[:：=])?\s*"
+        if re.search(r"(?:板筋|箍筋)" + assign + r"HRB\d+", text, re.I):
             issue("unsupported_reinforcement", "板筋和箍筋仅支持HPB300；HRB400仅适用于梁纵筋。")
+        if re.search(r"混凝土" + assign + r"(?:HRB|HPB)\d+|(?:梁纵筋|梁纵向钢筋|板筋|箍筋)" + assign + r"C\d+", text, re.I):
+            issue("material_assignment_conflict", "混凝土与钢筋等级的字段归属冲突，请明确正确材料。")
         if re.search(r"[一二三四五六七八九十]+跨", text):
             issue("outside_template_scope", "跨数由已选模板固定，不接受自然语言修改。")
         pairs = list(PAIR.finditer(text))
@@ -67,7 +70,7 @@ class FloorDemoProfile(LanguageProfile):
             grade = match[0].upper()
             covered.append(match.span())
             if grade.startswith("HPB") and (grade != "HPB300" or not re.search(
-                    r"(?:板筋|箍筋|板筋和箍筋|板筋及箍筋)\s*(?:采用|为|取|[:：=])?\s*$", text[:match.start()])):
+                    r"(?:板筋|箍筋|板筋和箍筋|板筋及箍筋)\s*(?:采用|为|取|保留|[:：=])?\s*$", text[:match.start()])):
                 issue("unsupported_reinforcement", "HPB300仅能明确用于板筋和箍筋；梁纵筋须显式给出HRB400。")
         loads = list(LIVE.finditer(text))
         if len(loads) > 1:

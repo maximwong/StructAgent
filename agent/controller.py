@@ -103,7 +103,7 @@ class AgentController:
                     validate_json(result.result, make_validator(tool.output_schema))
                 path = self.state.publish_result(snapshot["run_id"], step.name, data)
                 snapshot["tool_calls"][-1].update(status="completed" if result.success else "failed", result_path=path)
-                snapshot["warnings"].extend(result.warnings)
+                snapshot["warnings"].extend(w for w in result.warnings if w not in snapshot["warnings"])
                 recovery_required = result.metadata.get("recovery_required") is True or (
                     not result.success and step.external_effects and result.metadata.get("recovery_required") is not False)
                 snapshot["external_started"] = recovery_required

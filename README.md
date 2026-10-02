@@ -4,6 +4,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
+阶段5.1已修复材料字段归属和超时诊断，补齐 [历史产物归档](docs/artifact-archive.md) 与 [离线安装和制品哈希](docs/offline-deployment.md)。真实链路、取消/超时及离线新环境验证通过，详见 [修复报告](docs/stages/phase-5.1.md)。
+
 ## 当前可用内容
 
 - `legacy/rc_floor/`：原有楼盖程序的独立修复版，保留板、次梁、主梁的连续计算及 RFLOAD/RFALL AutoLISP 命令。
@@ -13,7 +15,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。当前�
 - `tools/floor/`：楼盖设计/CAD Tool、Adapter、隔离计算与数据转换进程、结果引用及已确认的Demo模板。
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
 - `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态。
-- `examples/`、`tests/`：可运行示例及130项核心、设计、CAD、状态、解析与Controller测试，另有87项旧程序回归。
+- `examples/`、`tests/`：可运行示例及152项核心、设计、CAD、状态、解析、Controller、归档与部署测试，另有87项旧程序回归。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
 阶段0.1关闭了材料名称与强度不一致、布尔值参与工程数值计算、RFALL撤销组异常三项缺陷。原有80项加新增7项自动测试在本机通过。AutoCAD实机验收记录和图纸仅保留在原工作区本地，不包含在公共仓库中。

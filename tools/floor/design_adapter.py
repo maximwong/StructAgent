@@ -56,7 +56,9 @@ class FloorDesignAdapter:
             model["geometry"]["main_axis_spans_mm"] = [millimetres(parameters["span_x"])] * 3
             model["geometry"]["secondary_axis_spans_mm"] = [millimetres(parameters["span_y"])] * 5
             model["geometry"]["secondary_spacing_mm"] = millimetres(parameters["span_x"] / 3)
-            model["loads"]["live_kN_m2"] = parameters["live_load"]
+            # LLM JSON may spell an identical load as 2 or 2.0. Match the approved
+            # template representation so legacy expression strings and hashes remain stable.
+            model["loads"]["live_kN_m2"] = float(parameters["live_load"])
             grade = parameters["concrete"]
             fc, ft = CONCRETE_MATERIALS[grade]
             model["materials"].update(concrete=grade, fc_MPa=fc, ft_MPa=ft,

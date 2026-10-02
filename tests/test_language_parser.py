@@ -52,6 +52,21 @@ class ParserTests(unittest.TestCase):
             self.assertEqual(result.missing_fields, ["profile_name"])
         self.gateway.complete.assert_not_called()
 
+    def test_confirmed_material_roles_and_keep_word_are_supported(self):
+        text = "设计6m×6m柱网楼盖，C30，梁纵筋HRB400，板筋及箍筋保留HPB300，活荷载2kN/m²。"
+        self.assertEqual(self.parse(text).status, "ready")
+
+    def test_swapped_material_roles_stop_before_cloud_call(self):
+        text = "设计6m×6m柱网楼盖，混凝土HRB400，梁纵筋C30，活荷载2kN/m²。"
+        result = self.parse(text)
+        self.assertEqual(result.status, "needs_input")
+        self.assertIn("material_assignment_conflict", [e["code"] for e in result.errors])
+        self.gateway.complete.assert_not_called()
+
+    def test_cloud_diagnostic_metadata_survives_parser(self):
+        self.gateway.complete.side_effect = GatewayError("api_timeout", "Safe error", {"request_stage": "reading_body"})
+        self.assertEqual(self.parse().metadata, {"request_stage": "reading_body"})
+
     def test_each_critical_field_missing_is_reported_without_default_or_api_charge(self):
         cases = {"span_x": TEXT.replace("6m×6m", ""), "span_y": TEXT.replace("6m×6m", ""),
                  "concrete": TEXT.replace("C30", ""), "steel": TEXT.replace("HRB400", ""),

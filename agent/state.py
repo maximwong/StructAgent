@@ -37,13 +37,21 @@ class AgentState:
 
     def get(self, run_id):
         self.store.reconcile()
-        record = next((r for r in self.store.list_runs() if r["run_id"] == run_id), None)
-        if record is None:
-            raise KeyError("Unknown workflow run.")
+        record = self.store.get(run_id)
         snapshot = deepcopy(record["metadata"])
         snapshot["persistence_state"] = record["state"]
+        archive = self.root.parent / "archives" / (run_id + ".zip")
+        if archive.is_file() and archive.with_suffix(".json").is_file():
+            snapshot["artifact_archive"] = {"path": str(archive), "requires_restore": any(
+                not Path(c["result_path"]).is_file() for c in snapshot["tool_calls"] if c.get("result_path"))}
         if record["state"] in ("INTERRUPTED", "RECOVERY_REQUIRED"):
             snapshot.update(success=False, status=record["state"].lower())
             snapshot["steps"] = {k: "interrupted" if v == "running" else "skipped" if v == "pending" else v
                                  for k, v in snapshot["steps"].items()}
+            for call in snapshot["tool_calls"]:
+                if call["status"] == "running":
+                    call["status"] = "interrupted"
+            if record["metadata"].get("interruption"):
+                snapshot["errors"].append({"code": "owner_exited", "path": [],
+                                           "message": "The original workflow process exited; no steps were replayed."})
         return snapshot

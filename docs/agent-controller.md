@@ -68,6 +68,8 @@ SQLite核心状态只有RUNNING/COMPLETED/FAILED/INTERRUPTED/RECOVERY_REQUIRED�
 
 已有工作流记录保留当时的中断/待恢复结论；CAD后续完成恢复不会自动把历史工作流改成completed，重新执行需要新run_id。当前不实现从中间步骤续跑、全局跨工具取消按钮或跨设备共享数据库。持久状态写入失败立即停止，返回state_saved:false，需要检查最后的持久记录。
 
+阶段5.1中状态查询使用主键，协调只检查索引中的RUNNING记录；确认原进程退出时，仍在running的工具调用同步显示interrupted。已知的CAD待恢复故障不伪称进程崩溃。汇总warnings去重，步骤ToolResult保留原始警告。终态产物可按 [归档说明](artifact-archive.md) 手动归档和恢复；状态查询附加artifact_archive路径及requires_restore，不重写执行结论。
+
 ## 测试
 
 ```powershell

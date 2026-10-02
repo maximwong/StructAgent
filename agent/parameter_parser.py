@@ -104,7 +104,7 @@ class ParameterParser:
                 {"role": "user", "content": text},
             ])
         except GatewayError as exc:
-            return ParseResult("error", errors=[{"code": exc.code, "path": [], "message": str(exc)}])
+            return ParseResult("error", errors=[{"code": exc.code, "path": [], "message": str(exc)}], metadata=deepcopy(exc.metadata))
         try:
             validate_json(proposal, make_validator(response_schema))
             parameters = proposal["parameters"]
