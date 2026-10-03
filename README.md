@@ -8,9 +8,11 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 
 本开发分支新增“完整工程参数（不使用模板）”：填写或导入参数，可直接说“按表单设计”，也可修改板厚、梁截面等13项参数；无需勾选模板。缺项明确提示，完整表单不会隐式填入案例。主梁3跨、次梁5跨等旧引擎边界仍保留。见[使用说明](docs/explicit-floor-input.md)与[本阶段报告](docs/stages/phase-9.md)。切换分支后需退出并重新启动旧UI服务。
 
-当前进一步接入`check_floor_design`：Agent按“设计→独立截面校核→CAD”执行，FAIL即停止出图。UI显示逐项结果和范围，原计算/Controller不改动。仅覆盖实配截面、排布及抗剪约束，尚未完成自动改参闭环。见[校核Tool说明](docs/floor-check-tool.md)与[阶段10报告](docs/stages/phase-10.md)。
+当前进一步接入`check_floor_design`：Agent按“设计→独立截面校核→CAD”执行，FAIL即停止出图。UI显示逐项结果和范围，原计算/Controller不改动。仅覆盖实配截面、排布及抗剪约束。见[校核Tool说明](docs/floor-check-tool.md)与[阶段10报告](docs/stages/phase-10.md)。
 
-阶段10.1修复校核记录损坏时的页面异常与判定一致性，保留原历史并禁止从不可确认记录打开CAD。浏览器可视验收仍单独保留，见[技术债清理报告](docs/stages/phase-10.1.md)。
+阶段10.1修复校核记录损坏时的页面异常与判定一致性，保留原历史并禁止从不可确认记录打开CAD。用户已确认手动浏览器验收完成，此前自动验收中止记录保留，见[技术债清理报告](docs/stages/phase-10.1.md)。
+
+阶段11新增显式启用的受限重设计入口：完整模型、允许调整的尺寸候选、最多4轮和时间预算都由用户提供。每轮调用设计及独立校核，最终PASS后才可出图；普通网页仍使用单次流程。运行`python -m examples.floor_revision --request-file demos/revision-a.json`仅计算，加`--cad`才调用真实AutoCAD。见[使用与边界](docs/bounded-redesign.md)及[阶段11报告](docs/stages/phase-11.md)。
 
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
@@ -26,9 +28,9 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 - `core/`：EngineeringTool、ToolResult、ToolRegistry、统一校验及通用持久执行状态。
 - `tools/floor/`：楼盖设计/CAD Tool、Adapter、隔离计算与数据转换进程、结果引用及已确认的Demo模板。
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
-- `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态。
+- `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态；`agent/revision.py`提供可配置的受限工具组合。
 - `app.py`、`ui/`：本机浏览器界面、后台工作流执行、历史记录及受控恢复/打开图纸，无新增依赖。
-- `examples/`、`tests/`：可运行示例及225项核心、设计、校核、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
+- `examples/`、`tests/`：可运行示例及237项核心、设计、校核、受限重设计、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
 - `demos/`：A/B/C自然语言、预期参数及已冻结的完整设计/CAD场景基线。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 

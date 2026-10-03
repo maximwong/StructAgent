@@ -29,7 +29,7 @@ Controller接收自然语言及显式模板选择，调用参数解析器，再�
 - `agent/controller.py`：只使用Registry、Schema、ToolResult、解析结果和持久状态。
 - `agent/workflow.py`：`Workflow` / `WorkflowStep` / `ResultBinding`声明步骤、固定参数及前序结果字段绑定。配置由应用提供，不能由模型生成。
 - `agent/state.py`：复用 `core.ProjectStateStore` 的SQLite事务、进程归属和终态保护；每步ToolResult独占原子发布。
-- `tools/floor/plugin.py`：在组合入口注册楼盖设计与CAD工具，并提供工作流配置。此模块由CLI导入，Controller不导入。
+- `tools/floor/plugin.py`：在组合入口注册楼盖设计、独立校核与CAD工具，并提供工作流配置。此模块由CLI导入，Controller不导入。
 - `FloorDesignTool(store=...)`：计算成功后复用已有设计存储，返回 `metadata.design_result_ref`。不传store时保持原有无持久输出行为。
 
 楼盖工作流配置如下：
@@ -37,15 +37,20 @@ Controller接收自然语言及显式模板选择，调用参数解析器，再�
 ```python
 Workflow("floor_design", (
     WorkflowStep("design", "design_floor_system"),
-    WorkflowStep("cad", "generate_floor_cad", external_effects=True,
+    WorkflowStep("check", "check_floor_design",
         bindings={"design_result_ref": ResultBinding(
             "design", ("metadata", "design_result_ref"))}),
+    WorkflowStep("cad", "generate_floor_cad", external_effects=True,
+        bindings={"design_result_ref": ResultBinding(
+            "check", ("result", "design_result_ref"))}),
 ))
 ```
 
 首步参数来自通过校验的解析Envelope。后续参数从声明的前序成功ToolResult路径获取，项目身份和context沿用原Envelope；绑定缺项或Schema不符则停止。固定参数和绑定不能重名，禁止向后引用、重复步骤及未知工具。路径只访问字典键或列表下标，不执行表达式、脚本或动态导入。
 
 解析到的工具名称查找唯一工作流；每个入口工具只允许配置一条工作流。增加墙、柱、基础等能力时，注册Tool、LanguageProfile与Workflow即可。测试中的第二种工程工具只替换注册配置，未修改Controller。生产自动扫描插件目录仍按原路线放在后续版本。
+
+阶段11另提供显式注册的`floor_revision`流程，入口为`design_floor_with_revisions`，内部通过Registry组合设计、校核和专业建议工具；最终引用再绑定到CAD。初始完整参数、允许的候选及上限从结构化请求输入，普通自然语言/UI流程不自动切换。Controller及其失败停止规则保持不变，详见[受限重设计](bounded-redesign.md)。
 
 ## 状态及失败处理
 
