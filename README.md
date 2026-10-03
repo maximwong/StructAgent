@@ -10,6 +10,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 
 当前进一步接入`check_floor_design`：Agent按“设计→独立截面校核→CAD”执行，FAIL即停止出图。UI显示逐项结果和范围，原计算/Controller不改动。仅覆盖实配截面、排布及抗剪约束，尚未完成自动改参闭环。见[校核Tool说明](docs/floor-check-tool.md)与[阶段10报告](docs/stages/phase-10.md)。
 
+阶段10.1修复校核记录损坏时的页面异常与判定一致性，保留原历史并禁止从不可确认记录打开CAD。浏览器可视验收仍单独保留，见[技术债清理报告](docs/stages/phase-10.1.md)。
+
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
 阶段5.1已修复材料字段归属和超时诊断，补齐 [历史产物归档](docs/artifact-archive.md) 与 [离线安装和制品哈希](docs/offline-deployment.md)。真实链路、取消/超时及离线新环境验证通过，详见 [修复报告](docs/stages/phase-5.1.md)。
@@ -26,7 +28,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
 - `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态。
 - `app.py`、`ui/`：本机浏览器界面、后台工作流执行、历史记录及受控恢复/打开图纸，无新增依赖。
-- `examples/`、`tests/`：可运行示例及216项核心、设计、校核、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
+- `examples/`、`tests/`：可运行示例及225项核心、设计、校核、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
 - `demos/`：A/B/C自然语言、预期参数及已冻结的完整设计/CAD场景基线。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 

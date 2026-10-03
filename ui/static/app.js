@@ -41,7 +41,8 @@ function render(job) {
   }
   $("design-summary").textContent=job.summary?`已完成板、次梁、主梁设计及已有校核；共 ${job.summary.reinforcement_items} 项钢筋明细。`:"尚未完成计算";
   const checked=job.check;
-  $("check-summary").textContent=checked?`独立校核 ${checked.status}：${checked.summary.passed}/${checked.summary.total} 项通过（含数据一致性检查）。`:"尚未完成独立校核";
+  $("check-summary").textContent=job.check_issue||(checked?`独立校核 ${checked.status}：${checked.summary.passed}/${checked.summary.total} 项通过（含数据一致性检查）。`:"尚未完成独立校核");
+  if(job.check_issue)$("issues").append(node("p",job.check_issue,"issue"));
   $("check-details").hidden=!checked;$("check-rows").replaceChildren();
   if(checked){$("check-coverage").textContent=checked.coverage.demand_source+" 未独立复核："+checked.coverage.not_checked.join("；")+"。";for(const item of checked.checks){const row=document.createElement("tr");row.append(node("td",`${memberNames[item.member]}截面${item.section+1} · ${item.label}`),node("td",`${Number(item.actual.toPrecision(7))} ${item.relation} ${Number(item.limit.toPrecision(7))} ${item.unit}`),node("td",item.passed?"通过":"未通过"));$("check-rows").append(row);}}
   const cad=(s.steps||{}).cad;

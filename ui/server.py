@@ -4,6 +4,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import secrets
+import socket
 from urllib.parse import urlsplit
 
 from .service import UIError
@@ -13,6 +14,14 @@ STATIC = Path(__file__).with_name("static")
 
 class LocalServer(ThreadingHTTPServer):
     daemon_threads = True
+    # HTTPServer enables SO_REUSEADDR, which permits competing listeners on Windows.
+    # Exclusive binding must be set before bind; health checks cannot prevent that race.
+    allow_reuse_address = not hasattr(socket, 'SO_EXCLUSIVEADDRUSE')
+
+    def server_bind(self):
+        if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
     def __init__(self, service, port=8765):
         self.service = service
