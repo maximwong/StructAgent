@@ -13,6 +13,8 @@ from agent.state import AgentState
 from core.persistence import write_json
 from core.validation import ensure_json
 from core.exceptions import ToolValidationError
+from core import ToolResult
+from .check_presentation import present_check
 
 
 class UIError(ValueError):
@@ -156,8 +158,9 @@ class RunService:
             record = self._record(job_id)
             snapshot = self._snapshot(record)
             summary = self._summary(snapshot)
-            return {**record, "snapshot": snapshot, "summary": summary, "check": self._check_summary(snapshot),
-                    "can_open": snapshot.get("success") is True and self.active is None and self._drawing(snapshot) is not None}
+            checked, check_issue = self._check_summary(snapshot)
+            return {**record, "snapshot": snapshot, "summary": summary, "check": checked, "check_issue": check_issue,
+                    "can_open": snapshot.get("success") is True and not check_issue and self.active is None and self._drawing(snapshot) is not None}
 
     def status(self):
         with self.lock:
@@ -187,6 +190,8 @@ class RunService:
         with self.lock:
             self._ensure_idle()
             snapshot = self._snapshot(self._record(job_id))
+            if self._check_summary(snapshot)[1]:
+                raise UIError("校核记录无法确认，请保留记录并检查后再打开图纸。", 409)
             path = self._drawing(snapshot) if snapshot.get("success") is True else None
             if path is None:
                 raise UIError("本次没有可打开的已验证图纸，或图纸已被移动。", 409)
@@ -224,14 +229,11 @@ class RunService:
         for call in snapshot.get("tool_calls", []):
             if call.get("step") != "design" or call.get("status") != "completed":
                 continue
-            path = Path(call.get("result_path", "")).resolve()
-            if not path.is_relative_to(self.root) or not path.is_file():
-                return None
             try:
-                result = json.loads(path.read_text(encoding="utf-8"))["result"]
+                result = self._read_tool_result(call, snapshot).result
                 return {"sections": {key: len(result[key]["sections"]) for key in ("slab", "secondary_beam", "main_beam")},
                         "reinforcement_items": len(result["reinforcement"]["bars"])}
-            except (OSError, ValueError, KeyError, TypeError):
+            except (OSError, ValueError, KeyError, TypeError, RuntimeError):
                 return None
         return None
 
@@ -241,16 +243,36 @@ class RunService:
             self.stopping = True
 
     def _check_summary(self, snapshot):
-        for call in snapshot.get("tool_calls", []):
-            if call.get("tool") != "check_floor_design" or not call.get("result_path"):
-                continue
-            path = Path(call["result_path"]).resolve()
-            if not path.is_relative_to(self.root) or not path.is_file():
-                return None
-            try:
-                result = json.loads(path.read_text(encoding="utf-8"))["result"]
-                if result.get("status") in ("PASS", "FAIL"):
-                    return {key: result[key] for key in ("status", "summary", "coverage", "checks")}
-            except (OSError,ValueError,KeyError,TypeError):
-                return None
-        return None
+        calls = [call for call in snapshot.get('tool_calls', []) if call.get('tool') == 'check_floor_design']
+        state = snapshot.get('steps', {}).get('check')
+        if not calls and state not in ('completed', 'failed'):
+            return None, None  # Historical runs did not include this tool.
+        if len(calls) == 1 and calls[0].get('status') in ('running', 'interrupted') and not snapshot.get('success'):
+            return None, None
+        try:
+            if len(calls) != 1:
+                raise ValueError('Missing or duplicated check call.')
+            call = calls[0]
+            payload = self._read_tool_result(call, snapshot)
+            checked = present_check(payload, snapshot)
+            if snapshot.get('success') and checked['status'] != 'PASS':
+                raise ValueError('Completed workflow has no passing check.')
+            return checked, None
+        except (OSError, ValueError, KeyError, TypeError, RuntimeError, ArithmeticError):
+            return None, "校核结果不可用或记录不一致，无法确认通过；请保留运行记录供检查，不会自动重新计算或出图。"
+
+    def _read_tool_result(self, call, snapshot):
+        # Resolve inside the try boundary in callers; malformed/null paths are also invalid records.
+        run_id, step = snapshot['run_id'], call['step']
+        if (not isinstance(run_id, str) or re.fullmatch(r'[0-9a-f]{32}', run_id) is None
+                or not isinstance(step, str) or re.fullmatch(r'[a-z][a-z0-9_]*', step) is None):
+            raise ValueError('Invalid result identity.')
+        path = Path(call['result_path']).resolve()
+        expected = self.root / 'agent' / run_id / (step + '.json')
+        if path != expected or not path.is_file():
+            raise ValueError('Result must belong to this run and step.')
+        payload = ToolResult(**json.loads(path.read_text(encoding='utf-8')))
+        if (payload.tool != call['tool'] or payload.version != call['version']
+                or call.get('status') != ('completed' if payload.success else 'failed')):
+            raise ValueError('Result identity or execution status differs.')
+        return payload

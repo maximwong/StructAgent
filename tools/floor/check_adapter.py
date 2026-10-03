@@ -33,6 +33,24 @@ class FloorCheckError(ValueError):
         super().__init__(message)
 
 
+def validate_report(result):
+    """Validate both shape and verdict; shared by execution and saved-result readers."""
+    validate_json(result, make_validator(REPORT))
+    checks = result['checks']
+    for item in checks:
+        actual, limit = item['actual'], item['limit']
+        tolerance = 1e-7 + 1e-8 * max(abs(actual), abs(limit))
+        passed = (actual + tolerance >= limit if item['relation'] == '>=' else
+                  actual <= limit + tolerance if item['relation'] == '<=' else abs(actual-limit) <= tolerance)
+        if item['passed'] != passed:
+            raise ValueError('Check verdict disagrees with the recorded comparison.')
+    failed = sum(not item['passed'] for item in checks)
+    if (result['status'] != ('FAIL' if failed else 'PASS')
+            or result['summary'] != dict(total=len(checks), passed=len(checks)-failed, failed=failed)
+            or len({item['id'] for item in checks}) != len(checks)):
+        raise ValueError('Inconsistent check report.')
+
+
 class FloorCheckAdapter:
     def __init__(self,timeout_seconds=30):
         if type(timeout_seconds) not in (int,float) or not math.isfinite(timeout_seconds) or timeout_seconds<=0:
@@ -69,13 +87,9 @@ class FloorCheckAdapter:
                 if error['code'] not in ('check_input_invalid','check_execution_error') or not isinstance(error['message'],str):
                     raise ValueError('Invalid worker error.')
                 raise FloorCheckError(error['code'],error['message'])
-            result=data['result'];validate_json(result,make_validator(REPORT))
-            failed=sum(not item['passed'] for item in result['checks'])
-            if (result['status']!=('FAIL' if failed else 'PASS') or result['summary']!=dict(total=len(result['checks']),passed=len(result['checks'])-failed,failed=failed)
-                    or len({item['id'] for item in result['checks']})!=len(result['checks'])):
-                raise ValueError('Inconsistent report.')
+            result=data['result'];validate_report(result)
             return result
         except FloorCheckError:
             raise
-        except (ValueError,KeyError,TypeError,AttributeError):
+        except (ValueError,KeyError,TypeError,AttributeError,ArithmeticError):
             raise FloorCheckError('check_protocol_error','独立校核返回格式无效，禁止继续出图。') from None

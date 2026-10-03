@@ -3,7 +3,7 @@
 from copy import deepcopy
 from core import EngineeringTool, ToolResult, ToolValidationError
 from core.validation import make_validator, validate_json
-from .check_adapter import COVERAGE, REPORT, FloorCheckAdapter, FloorCheckError
+from .check_adapter import COVERAGE, REPORT, FloorCheckAdapter, FloorCheckError, validate_report
 from .design_store import REFERENCE, DesignReferenceError
 from .schemas import CONTEXT_SCHEMA, object_schema
 
@@ -35,6 +35,7 @@ class FloorCheckTool(EngineeringTool):
             return ToolResult.failure(self.name,self.version,'invalid_design_reference','需要本项目完整且校验和有效的设计结果。')
         try:
             report=self.adapter.check(design)
+            validate_report(report)
             result={**report,'design_result_ref':ref,'coverage':deepcopy(COVERAGE)}
             # Failed engineering checks are also schema-validated, unlike generic failed executions.
             validate_json(result,make_validator(OUTPUT))
