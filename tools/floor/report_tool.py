@@ -11,20 +11,21 @@ from .report_adapter import FloorReportError
 from .report_history import REVISION_ID, load_history
 from .schemas import CONTEXT_SCHEMA, object_schema
 
+OUTPUT = object_schema(dict(report_id={'type':'string', 'pattern':r'^report-[0-9a-f]{32}$'},
+    status={'const':'completed'}, format={'const':'docx'}, docx_sha256={'type':'string','pattern':r'^[0-9a-f]{64}$'},
+    evidence_sha256={'type':'string','pattern':r'^[0-9a-f]{64}$'},
+    **{key:{'type':'integer','minimum':1} for key in ('paragraphs','tables','images')},
+    design_result_ref=REFERENCE, design_sha256={'type':'string','pattern':r'^[0-9a-f]{64}$'},
+    check_summary=CHECK_OUTPUT['properties']['summary'], revision_id={'anyOf':[REVISION_ID,{'type':'null'}]}))
+
 
 class FloorReportTool(EngineeringTool):
     def __init__(self, store, registry, adapter, revision_root):
         parameters = object_schema({'design_result_ref': REFERENCE, 'revision_id': REVISION_ID})
         parameters['required'] = ['design_result_ref']
-        output = object_schema(dict(report_id={'type':'string', 'pattern':r'^report-[0-9a-f]{32}$'},
-            status={'const':'completed'}, format={'const':'docx'}, docx_sha256={'type':'string','pattern':r'^[0-9a-f]{64}$'},
-            evidence_sha256={'type':'string','pattern':r'^[0-9a-f]{64}$'},
-            **{key:{'type':'integer','minimum':1} for key in ('paragraphs','tables','images')},
-            design_result_ref=REFERENCE, design_sha256={'type':'string'},
-            check_summary=CHECK_OUTPUT['properties']['summary'], revision_id={'anyOf':[REVISION_ID,{'type':'null'}]}))
         super().__init__(name='generate_floor_report', version='1.0.0',
             description='读取已保存楼盖设计，只读复核后生成Word计算书；可附完整授权调整记录，不重新设计或调用CAD。',
-            parameters_schema=parameters, output_schema=output)
+            parameters_schema=parameters, output_schema=deepcopy(OUTPUT))
         self.store, self.registry, self.adapter, self.revision_root = store, registry, adapter, revision_root
         self._input_schema['properties']['context'] = deepcopy(CONTEXT_SCHEMA)
         self._input_validator = make_validator(self._input_schema)

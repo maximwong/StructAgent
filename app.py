@@ -10,14 +10,17 @@ import webbrowser
 
 from agent.controller import AgentController
 from agent.parameter_parser import ParameterParser
+from agent.parameter_parser import ParseResult
 from agent.state import AgentState
+from agent.workflow import Workflow, WorkflowStep
 from config import load_settings
 from core import ToolRegistry
 from llm import DeepSeekGateway
 from tools.floor.language_profile import FloorDemoProfile
 from tools.floor.explicit_profile import FloorExplicitProfile
 from tools.floor.input_form import floor_input_form
-from tools.floor.plugin import register_floor_workflow
+from tools.floor.plugin import register_floor_workflow, register_floor_report_workflow
+from tools.floor.report_presentation import floor_report_source, validate_floor_report
 from ui.server import LocalServer
 from ui.service import RunService
 
@@ -41,6 +44,17 @@ def recover(root):
         raise ValueError("Recovery was not confirmed.")
 
 
+def report_controller_factory(root, envelope):
+    # The user selects an existing design; no cloud parsing, design or CAD here.
+    class SavedRequestParser:
+        def parse(self, text, *, project_id, profile_name=None):
+            return ParseResult('ready',envelope=envelope)
+    registry = ToolRegistry()
+    register_floor_report_workflow(registry,root)
+    workflow = Workflow('artifact_report',(WorkflowStep('report','generate_floor_report'),))
+    return AgentController(registry,SavedRequestParser(),AgentState(root/'agent'),[workflow])
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
@@ -51,7 +65,8 @@ def main():
         parser.error("port must be 1..65535")
     service = RunService(args.output_root, controller_factory, settings_check=load_settings, recover=recover,
                          explicit_controller_factory=lambda root, model: controller_factory(root, model=model),
-                         input_form=floor_input_form)
+                         input_form=floor_input_form,report_factory=report_controller_factory,
+                         report_source=floor_report_source,report_validator=validate_floor_report)
     try:
         server = LocalServer(service, args.port)
     except OSError:

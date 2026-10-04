@@ -10,7 +10,7 @@
 - Controller使用应用声明的Workflow和ResultBinding，不能执行LLM生成的流程或表达式。专业注册与步骤绑定放在 `tools/<专业>/plugin.py`；任何步骤失败必须停止后续工具，外部工具明确返回布尔metadata.recovery_required。每次重试生成新run_id，禁止自动重放未知完成状态的CAD步骤。见 `docs/agent-controller.md`。
 - 楼盖工作流已增加`check_floor_design`关口：只读已存设计，用实配钢筋和既有纯函数复核截面/抗剪约束，不能调用设计入口重新选筋后冒充原方案通过。FAIL使用success=false停止CAD，保留逐项依据和未覆盖范围；独立内力、全项验算尚未实现。见 `docs/floor-check-tool.md`。
 - 受限重设计仅显式注册和启用：用户完整输入、尺寸候选、最多4轮及时间预算均为必填。每轮只改一个授权字段的下一候选，重新完整设计和校核；未知错误、引用错配、超时及记录失败立即停止。不得改荷载/材料等受保护字段、扩大授权、自动重放CAD或从残留日志续跑；普通网页仍为单次流程。专业诊断在插件内，通用组合及Controller不导入楼盖程序。见 `docs/bounded-redesign.md`。
-- 计算书Tool只读取本项目设计引用，报告前经Registry只读Check，复用旧图表/build_docx；禁止调用旧workflow.generate重新设计和出图。调整附录只接收完整PASS的revision_id，核对每轮实际输入、授权及最终引用；不从历史路径执行代码或续跑。报告文件和回执完整发布后才成功，正式PDF/网页入口尚未接入，见 `docs/floor-report-tool.md`。
+- 计算书Tool只读取本项目设计引用，报告前经Registry只读Check，复用旧图表/build_docx；禁止调用旧workflow.generate重新设计和出图。调整附录只接收完整PASS的revision_id，核对每轮实际输入、授权及最终引用；不从历史路径执行代码或续跑。网页报告必须使用应用注入的Controller与专业验证器，保留原设计run_id/终态；完整文件、依据、回执和关联均验证后才可打开/下载。正式PDF尚未接入，见 `docs/floor-report-tool.md` 和 `docs/report-ui.md`。
 - 不提交密钥、个人路径、客户工程文件、生成图纸、验证日志或CAD临时文件。公开仓库中仅放可复用源码、匿名样例和测试。
 - 新Tool继承 `core.EngineeringTool`，实现 `_execute`；沿用基类 `execute` 的输入与输出校验。完整Envelope及结果规范见 `docs/tool-core.md`，示例见 `examples/dummy_tool.py`。
 - 楼盖工具使用 `tools/floor/design_tool.py` 和 `design_adapter.py`，通过独立Python进程运行旧引擎。不要把旧引擎目录加入Controller或父进程的全局导入路径。模板必须显式选择；输入/输出约定见 `docs/floor-design-tool.md`。

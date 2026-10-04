@@ -33,6 +33,7 @@
     <div class="card"><h2>解析参数</h2><p id="parameter-empty" class="muted">参数确认后将显示数值及原文依据。</p><div class="parameter-table"><table id="parameters" hidden><thead><tr><th>参数</th><th>数值</th><th>原文依据</th></tr></thead><tbody></tbody></table></div></div>
     <div class="card"><h2>独立校核</h2><p id="check-summary">尚未完成独立校核</p><p class="small muted">仅复核实配截面与抗剪约束；不包含独立内力分析及规范全项审查。</p><details id="check-details" hidden><summary>范围与逐项结果</summary><p id="check-coverage"></p><div class="parameter-table"><table class="full-model"><thead><tr><th>检查项</th><th>数值与限值</th><th>结果</th></tr></thead><tbody id="check-rows"></tbody></table></div></details></div>
     <div class="card"><div class="row"><h2>设计与图纸</h2><button id="open-cad" class="primary compact" disabled>打开CAD图纸</button></div><p id="design-summary" class="muted">尚未完成计算</p><p id="cad-status">尚未生成图纸</p><p id="drawing-path" class="small path"></p><details id="warning-box" hidden><summary>设计提示与校核警告</summary><ul id="warnings"></ul></details></div>
+    <div class="card"><h2>计算书</h2><p id="report-status" aria-live="polite">设计及独立校核通过后可生成Word计算书。</p><div class="utilities"><button id="generate-report" disabled>生成计算书</button><button id="open-report" disabled>打开计算书</button><button id="download-report" disabled>下载计算书</button></div><p id="report-summary" class="small muted"></p><p id="report-run-id" class="small muted"></p></div>
     <div class="card"><h2>工具调用日志</h2><ul id="tool-log" class="log"><li class="muted">暂无工具调用</li></ul><p id="run-id" class="small muted"></p></div>
   </section>
 </main>

@@ -20,6 +20,7 @@ function controls() {
   $("recover").disabled = busy || pending || stopped;
   $("stop").disabled = busy || pending || stopped;
   if(busy || pending || stopped) $("open-cad").disabled=true;
+  if(busy || pending || stopped) for(const id of ["generate-report","open-report","download-report"]) $(id).disabled=true;
 }
 function node(tag,text,className) { const el=document.createElement(tag);el.textContent=text;if(className)el.className=className;return el; }
 function render(job) {
@@ -53,6 +54,15 @@ function render(job) {
   $("tool-log").replaceChildren();for(const call of s.tool_calls||[]){const li=document.createElement("li");li.append(node("span",`${steps[call.step]||call.step} · ${call.tool}`),node("span",labels[call.status]||call.status));$("tool-log").append(li);}
   if(!(s.tool_calls||[]).length)$("tool-log").append(node("li","暂无工具调用","muted"));
   $("run-id").textContent=s.run_id?"运行编号："+s.run_id:"";
+  const report=job.report;
+  $("report-status").textContent=report?.message||"本机尚未启用计算书功能，请更新并重启程序。";
+  $("generate-report").disabled=!report?.can_generate||busy||pending;
+  $("generate-report").textContent=report?.status==="running"?"计算书生成中…":report?.status==="completed"?"重新生成计算书":"生成计算书";
+  $("open-report").disabled=!report?.can_open||busy||pending;
+  $("download-report").disabled=!report?.can_download||busy||pending;
+  $("report-summary").textContent=report?.summary?`Word格式 · ${report.summary.images}幅图 · ${report.summary.tables}张表 · ${report.summary.check_summary.passed}/${report.summary.check_summary.total}项校核通过。`:"";
+  $("report-run-id").textContent=report?.run_id?"计算书运行编号："+report.run_id:"";
+  if(report?.status==="completed"&&report.tool){const li=document.createElement("li");li.append(node("span","计算书 · "+report.tool),node("span","已完成"));$("tool-log").append(li);}
 }
 async function refresh() {
   const data=await api("/api/status");busy=!!data.active;ready=data.configuration.ready;
@@ -77,6 +87,16 @@ function restoreInput(job){$("project-name").value=job.project_name;$("request")
 $("input-mode").addEventListener("change",changeMode);
 $("history").addEventListener("change",async()=>{current=$("history").value;try{const job=await api("/api/jobs/"+current);restoreInput(job);render(job);}catch(error){notice(error.message);}});
 $("open-cad").addEventListener("click",async()=>{try{await api("/api/jobs/"+current+"/open-cad","POST",{});notice("已请求用本机AutoCAD打开图纸。");}catch(error){notice(error.message);}});
+for(const [id,action,message] of [["generate-report","generate-report","已开始生成本次方案的计算书。"],["open-report","open-report","已请求用本机文档软件打开计算书。"]]){
+  $(id).addEventListener("click",async()=>{if(pending||busy)return;pending=true;controls();try{await api("/api/jobs/"+current+"/"+action,"POST",{});notice(message);await refresh();}catch(error){notice(error.message);}finally{pending=false;controls();}});
+}
+$("download-report").addEventListener("click",async()=>{
+  if(pending||busy)return;pending=true;controls();
+  try{const response=await fetch("/api/jobs/"+current+"/report-download",{headers:{"X-StructAgent-Token":token}});
+    if(!response.ok){const result=await response.json();throw new Error(result.error||"计算书下载失败。");}
+    const url=URL.createObjectURL(await response.blob()),link=document.createElement("a");link.href=url;link.download="StructAgent-计算书.docx";document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);notice("计算书下载已交给浏览器，请查看下载列表。");
+  }catch(error){notice(error.message);}finally{pending=false;await refresh().catch(()=>{});controls();}
+});
 $("recover").addEventListener("click",async()=>{pending=true;controls();try{await api("/api/recover","POST",{});await refresh();}catch(error){notice(error.message);}finally{pending=false;controls();}});
 $("stop").addEventListener("click",async()=>{try{await api("/api/stop","POST",{});stopped=true;ready=false;controls();$("connection").textContent="程序已退出";notice("程序已退出，可以关闭此页面。下次双击启动文件即可重新打开。");}catch(error){notice(error.message);}});
 async function poll(){if(stopped)return;try{await refresh();}catch(error){$("connection").textContent="连接中断";ready=false;controls();notice("无法连接本机程序。请重新打开StructAgent并刷新页面，原任务不会自动重做。");}finally{if(!stopped)setTimeout(poll,1200);}}
