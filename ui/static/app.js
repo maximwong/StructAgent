@@ -83,7 +83,7 @@ $("design-form").addEventListener("submit",async event=>{
 document.querySelectorAll("[data-case]").forEach(button=>button.addEventListener("click",()=>{$("request").value=cases[button.dataset.case];$("request").focus();}));
 $("template-confirmed").addEventListener("change",controls);
 function changeMode(){$("template-panel").hidden=$("input-mode").value!=="template";$("full-input-panel").hidden=$("input-mode").value!=="explicit";controls();}
-function restoreInput(job){$("project-name").value=job.project_name;$("request").value=job.text;$("input-mode").value=job.profile==="floor_explicit_v1"?"explicit":"template";if(job.model)FullInput.load(job.model);changeMode();}
+function restoreInput(job){$("project-name").value=job.project_name;$("request").value=job.text;$("input-mode").value=Object.prototype.hasOwnProperty.call(job,"model")?"explicit":"template";if(job.model)FullInput.load(job.model);changeMode();}
 $("input-mode").addEventListener("change",changeMode);
 $("history").addEventListener("change",async()=>{current=$("history").value;try{const job=await api("/api/jobs/"+current);restoreInput(job);render(job);}catch(error){notice(error.message);}});
 $("open-cad").addEventListener("click",async()=>{try{await api("/api/jobs/"+current+"/open-cad","POST",{});notice("已请求用本机AutoCAD打开图纸。");}catch(error){notice(error.message);}});

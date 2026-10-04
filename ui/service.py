@@ -26,13 +26,15 @@ class UIError(ValueError):
 class RunService:
     def __init__(self, root, controller_factory, *, settings_check, recover, opener=None,
                  explicit_controller_factory=None, input_form=None,
-                 report_factory=None, report_source=None, report_validator=None):
+                 report_factory=None, report_source=None, report_validator=None,
+                 template_profile="office_floor_demo_v1", explicit_profile="floor_explicit_v1"):
         self.root = Path(root).resolve()
         self.jobs = self.root / "ui" / "jobs"
         self.jobs.mkdir(parents=True, exist_ok=True)
         self.state = AgentState(self.root / "agent")
         self.controller_factory = controller_factory
         self.explicit_controller_factory, self.input_form = explicit_controller_factory, input_form
+        self.template_profile, self.explicit_profile = template_profile, explicit_profile
         self.settings_check, self.recover = settings_check, recover
         self.opener = opener or os.startfile
         self.lock = threading.RLock()
@@ -105,7 +107,7 @@ class RunService:
             job_id = uuid4().hex
             record = {"id": job_id, "project_name": name.strip(), "text": text.strip(),
                       "project_id": name.strip() + "-" + job_id[:8], "created": time.time(),
-                      "profile": "floor_explicit_v1" if explicit else "office_floor_demo_v1"}
+                      "profile": self.explicit_profile if explicit else self.template_profile}
             if explicit:
                 record["model"] = deepcopy(payload["model"])
             write_json(self._path(job_id), record, exclusive=True)
@@ -121,7 +123,7 @@ class RunService:
     def _run(self, record):
         try:
             controller = (self.explicit_controller_factory(self.root, deepcopy(record["model"]))
-                          if record["profile"] == "floor_explicit_v1" else self.controller_factory(self.root))
+                          if record["profile"] == self.explicit_profile else self.controller_factory(self.root))
             result = controller.run(record["text"], project_id=record["project_id"], profile_name=record["profile"])
         except Exception:
             result = {"success": False, "status": "error", "errors": [

@@ -18,6 +18,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 
 阶段13将普通设计的计算书生成、打开及下载接入网页，作为独立操作和运行记录，保留原设计/CAD状态。无需重新调用云模型、设计或出图；文件与归属校验失败停止文档操作。正式PDF和网页调整授权尚未接入；浏览器/文档软件的实机验收状态见[阶段13报告](docs/stages/phase-13.md)，操作步骤见[网页计算书](docs/report-ui.md)。
 
+阶段14增加本地`plugins/*/plugin.json`发现与加载。楼盖工具、语言配置、工作流和网页回调通过插件接入，应用及Controller不导入楼盖模块。用`python -m examples.plugin_inventory`查看能力，测试Echo插件验证增加能力无需改Controller。正常网页仍只支持一个专业，真实柱/基础另行审计接入。见[插件说明](docs/plugins.md)与[阶段14报告](docs/stages/phase-14.md)。
+
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
 阶段5.1已修复材料字段归属和超时诊断，补齐 [历史产物归档](docs/artifact-archive.md) 与 [离线安装和制品哈希](docs/offline-deployment.md)。真实链路、取消/超时及离线新环境验证通过，详见 [修复报告](docs/stages/phase-5.1.md)。
@@ -34,7 +36,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
 - `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态；`agent/revision.py`提供可配置的受限工具组合。
 - `app.py`、`ui/`：本机浏览器界面、后台工作流执行、历史记录及受控恢复/打开图纸，无新增依赖。
-- `examples/`、`tests/`：可运行示例及257项核心、设计、校核、受限重设计、计算书、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
+- `plugins/`：本地专业插件声明及工厂，正常安装仅启用RC Floor。
+- `examples/`、`tests/`：可运行示例及276项核心、插件、设计、校核、受限重设计、计算书、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
 - `demos/`：A/B/C自然语言、预期参数及已冻结的完整设计/CAD场景基线。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
@@ -109,7 +112,7 @@ python -m examples.agent_workflow --template office_floor_demo_v1 --text "设计
 
 ## 协作方向
 
-阶段8已冻结稳定Demo；本分支已接入完整参数与独立截面校核，下一步定义受限诊断与重设计流程。Controller只依赖Registry、Schema、ToolResult和Project State；新增专业能力通过注册工具、语言配置及工作流接入。
+阶段8已冻结稳定Demo；本分支已接入完整参数、独立截面校核、受限循环、DOCX及本地插件发现，下一步验证第二种真实专业能力。Controller只依赖Registry、Schema、ToolResult和Project State；新增能力通过插件注册工具、语言配置及工作流接入。
 
 请通过 Issue 记录任务，使用独立分支和 Pull Request 提交修改，在PR中说明影响范围、验证命令和结果。工程算法变更需要给出样例对比和必要的校核依据。参见 [协作指南](CONTRIBUTING.md)。
 
