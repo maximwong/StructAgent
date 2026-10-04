@@ -10,6 +10,8 @@ from .design_store import FloorDesignStore
 from .design_tool import FloorDesignTool
 from .check_tool import FloorCheckTool
 from .revision_tool import FloorRevisionProposalTool, CHANGES_SCHEMA
+from .report_tool import FloorReportTool
+from .report_adapter import FloorReportAdapter
 from .schemas import CONTEXT_SCHEMA, EXPLICIT_PARAMETERS
 
 
@@ -44,3 +46,21 @@ def register_floor_revision_workflow(registry, output_root, *, cad_timeout=240, 
         WorkflowStep('cad','generate_floor_cad',external_effects=True,
             bindings={'design_result_ref':ResultBinding('revision',('result','final_reference'))}),
     ))
+
+
+def register_floor_report_workflow(registry, output_root, *, revision=False, cad=False,
+                                   cad_timeout=240, cad_backend=None, report_adapter=None):
+    """Opt-in report workflow, using the same unchanged controller and tool gates."""
+    root = Path(output_root)
+    register = register_floor_revision_workflow if revision else register_floor_workflow
+    original = register(registry, root, cad_timeout=cad_timeout, cad_backend=cad_backend)
+    registry.register(FloorReportTool(FloorDesignStore(root/'designs'),registry,
+        report_adapter if report_adapter is not None else FloorReportAdapter(root/'reports'),root/'revisions'))
+    bindings = {'design_result_ref':ResultBinding('revision',('result','final_reference')),
+                'revision_id':ResultBinding('revision',('result','revision_id'))} if revision else {
+                'design_result_ref':ResultBinding('check',('result','design_result_ref'))}
+    steps = (*original.steps[:-1], WorkflowStep('report','generate_floor_report',bindings=bindings))
+    if cad:
+        steps += (WorkflowStep('cad','generate_floor_cad',external_effects=True,
+                    bindings={'design_result_ref':ResultBinding('report',('result','design_result_ref'))}),)
+    return Workflow('floor_revision_report' if revision else 'floor_report',steps)

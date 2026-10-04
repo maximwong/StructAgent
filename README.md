@@ -14,6 +14,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 
 阶段11新增显式启用的受限重设计入口：完整模型、允许调整的尺寸候选、最多4轮和时间预算都由用户提供。每轮调用设计及独立校核，最终PASS后才可出图；普通网页仍使用单次流程。运行`python -m examples.floor_revision --request-file demos/revision-a.json`仅计算，加`--cad`才调用真实AutoCAD。见[使用与边界](docs/bounded-redesign.md)及[阶段11报告](docs/stages/phase-11.md)。
 
+阶段12新增`generate_floor_report`，读取已保存设计、只读校核后复用旧生成器输出Word计算书，并可附完整授权调整记录。运行`python -m examples.floor_report --case demo_a --project-id CSU-REPORT-001`通过原Controller完成设计→校核→报告，不调用API/CAD；正式PDF及网页入口尚未新增。见[计算书Tool](docs/floor-report-tool.md)与[阶段12报告](docs/stages/phase-12.md)。
+
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
 阶段5.1已修复材料字段归属和超时诊断，补齐 [历史产物归档](docs/artifact-archive.md) 与 [离线安装和制品哈希](docs/offline-deployment.md)。真实链路、取消/超时及离线新环境验证通过，详见 [修复报告](docs/stages/phase-5.1.md)。
@@ -30,7 +32,7 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
 - `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态；`agent/revision.py`提供可配置的受限工具组合。
 - `app.py`、`ui/`：本机浏览器界面、后台工作流执行、历史记录及受控恢复/打开图纸，无新增依赖。
-- `examples/`、`tests/`：可运行示例及237项核心、设计、校核、受限重设计、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
+- `examples/`、`tests/`：可运行示例及248项核心、设计、校核、受限重设计、计算书、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
 - `demos/`：A/B/C自然语言、预期参数及已冻结的完整设计/CAD场景基线。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
