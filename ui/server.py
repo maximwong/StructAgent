@@ -43,16 +43,23 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass  # Avoid persisting user input, query strings or local session tokens.
 
-    def reply(self, code, payload, content_type="application/json; charset=utf-8"):
+    def reply(self, code, payload, content_type="application/json; charset=utf-8", headers=None):
         body = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8") if isinstance(payload, dict) else payload
-        self.send_response(code)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'")
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(code)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            for name,value in (headers or {}).items():
+                self.send_header(name,value)
+            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'")
+            self.end_headers()
+            self.wfile.write(body)
+        except (ConnectionError, TimeoutError):
+            # A refresh/download cancellation closes the socket, not the background task.
+            # Do not try to send another error response on an already disconnected socket.
+            self.close_connection = True
 
     def _host(self):
         allowed = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}
@@ -85,6 +92,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, self.server.service.status())
             if path == "/api/input-form" and self.server.service.input_form:
                 return self.reply(200, self.server.service.input_form())
+            if path.startswith('/api/jobs/') and path.endswith('/report-download') and self.server.service.reports:
+                artifact = self.server.service.reports.artifact(path[len('/api/jobs/'):-len('/report-download')])
+                return self.reply(200,artifact['content'],
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    {'Content-Disposition':'attachment; filename="StructAgent-report.docx"'})
             if path.startswith("/api/jobs/"):
                 return self.reply(200, self.server.service.view(path.removeprefix("/api/jobs/")))
             raise UIError("找不到此页面。", 404)
@@ -105,6 +117,12 @@ class Handler(BaseHTTPRequestHandler):
             path = urlsplit(self.path).path
             if path == "/api/jobs":
                 return self.reply(202, self.server.service.start(body))
+            for suffix,action in (('/generate-report','start'),('/open-report','open')):
+                if path.startswith('/api/jobs/') and path.endswith(suffix) and self.server.service.reports:
+                    if body != {}:
+                        raise UIError('计算书操作只使用已存方案，不接受附加参数。')
+                    return self.reply(202 if action == 'start' else 200,
+                        getattr(self.server.service.reports,action)(path[len('/api/jobs/'):-len(suffix)]))
             if path.startswith("/api/jobs/") and path.endswith("/open-cad"):
                 return self.reply(200, self.server.service.open_drawing(path[len("/api/jobs/"):-len("/open-cad")]))
             if path == "/api/recover":

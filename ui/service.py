@@ -25,7 +25,8 @@ class UIError(ValueError):
 
 class RunService:
     def __init__(self, root, controller_factory, *, settings_check, recover, opener=None,
-                 explicit_controller_factory=None, input_form=None):
+                 explicit_controller_factory=None, input_form=None,
+                 report_factory=None, report_source=None, report_validator=None):
         self.root = Path(root).resolve()
         self.jobs = self.root / "ui" / "jobs"
         self.jobs.mkdir(parents=True, exist_ok=True)
@@ -40,6 +41,12 @@ class RunService:
         self.recovery = None
         self.stopping = False
         self.failures = {}
+        self.reports = None
+        if any(item is not None for item in (report_factory, report_source, report_validator)):
+            if any(item is None for item in (report_factory, report_source, report_validator)):
+                raise ValueError('Report composition requires factory, source and validator.')
+            from .report_service import ReportService
+            self.reports = ReportService(self,report_factory,report_source,report_validator)
 
     def configuration(self):
         try:
@@ -136,6 +143,11 @@ class RunService:
                     self.active = None
 
     def _snapshot(self, record):
+        if record.get('run_id'):
+            snapshot = self.state.get(record['run_id'])
+            if snapshot['project_id'] != record['project_id']:
+                raise UIError('运行归属不一致，请保留记录供检查。',409)
+            return snapshot
         runs = self.state.store.list_runs(record["project_id"])
         if runs:
             snapshot = self.state.get(runs[-1]["run_id"])
@@ -159,7 +171,9 @@ class RunService:
             snapshot = self._snapshot(record)
             summary = self._summary(snapshot)
             checked, check_issue = self._check_summary(snapshot)
+            report = self.reports.view(record,snapshot) if self.reports else None
             return {**record, "snapshot": snapshot, "summary": summary, "check": checked, "check_issue": check_issue,
+                    "report": report,
                     "can_open": snapshot.get("success") is True and not check_issue and self.active is None and self._drawing(snapshot) is not None}
 
     def status(self):
