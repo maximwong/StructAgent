@@ -35,6 +35,8 @@ jobs:
         run: python -m examples.dummy_tool
       - name: Run floor design example
         run: python -m examples.floor_design
+      - name: List installed plugin capabilities without executing tools
+        run: python -m examples.plugin_inventory
       - name: Run tests without AutoCAD
         working-directory: legacy/rc_floor
         run: python -m unittest discover -s tests -p "test_*.py"

@@ -13,6 +13,7 @@
 - 计算书Tool只读取本项目设计引用，报告前经Registry只读Check，复用旧图表/build_docx；禁止调用旧workflow.generate重新设计和出图。调整附录只接收完整PASS的revision_id，核对每轮实际输入、授权及最终引用；不从历史路径执行代码或续跑。网页报告必须使用应用注入的Controller与专业验证器，保留原设计run_id/终态；完整文件、依据、回执和关联均验证后才可打开/下载。正式PDF尚未接入，见 `docs/floor-report-tool.md` 和 `docs/report-ui.md`。
 - 不提交密钥、个人路径、客户工程文件、生成图纸、验证日志或CAD临时文件。公开仓库中仅放可复用源码、匿名样例和测试。
 - 新Tool继承 `core.EngineeringTool`，实现 `_execute`；沿用基类 `execute` 的输入与输出校验。完整Envelope及结果规范见 `docs/tool-core.md`，示例见 `examples/dummy_tool.py`。
+- 正式应用通过`plugins/*/plugin.json`及PluginContribution接入工具、工作流、语言配置和网页回调，不能在app/Controller重新引入专业分支。工厂仅构建对象，不在加载时执行工程/云/CAD；重复或不兼容声明必须拒绝，不静默覆盖。插件为本地可信Python，API v1依赖留在插件内部，代码更新需重启；测试Echo不进入正常安装目录。见`docs/plugins.md`。
 - 楼盖工具使用 `tools/floor/design_tool.py` 和 `design_adapter.py`，通过独立Python进程运行旧引擎。不要把旧引擎目录加入Controller或父进程的全局导入路径。模板必须显式选择；输入/输出约定见 `docs/floor-design-tool.md`。
 - CAD工具只接收设计结果引用；文件路径、旧CAD命令和AutoCAD会话管理留在Adapter内。每次生成新图纸/目录；没有本次成功回执与保存重开核对，不得返回成功。不能强制终止用户的AutoCAD进程。详见 `docs/floor-cad-tool.md`。
 - 修改后运行适当测试。按 `docs/demo-deployment.md` 创建固定独立环境，以 `requirements-demo.lock` 强制哈希安装，运行环境检查及 `python -m unittest discover -s tests -p "test_*.py"`；再在 `legacy/rc_floor/` 执行同一命令运行原有回归。离线包及安装器见 `docs/offline-deployment.md`，更新依赖同时更新版本、wheel哈希及回归。涉及RFALL时记录AutoCAD实机验证，不能把模拟成功写成实机通过。
