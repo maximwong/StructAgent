@@ -51,13 +51,15 @@ class PluginTests(unittest.TestCase):
         with patch('tools.floor.design_tool.FloorDesignTool.execute', side_effect=AssertionError('No calculation')):
             catalog = load_plugins(ROOT/'plugins', self.context)
         view = catalog.describe()
-        self.assertEqual([p['id'] for p in view['plugins']], ['rc_floor'])
+        self.assertEqual([p['id'] for p in view['plugins']], ['rc_column', 'rc_floor'])
         self.assertEqual({t['name'] for t in view['tools']},
-                         {'design_floor_system','check_floor_design','generate_floor_cad','generate_floor_report'})
+                         {'design_floor_system','check_floor_design','generate_floor_cad','generate_floor_report',
+                          'design_column','check_column_design'})
         self.assertTrue(all(t['version']=='1.0.0' and t['input_schema'] and t['output_schema'] for t in view['tools']))
         self.assertEqual(catalog.web_binding().explicit_profile, 'floor_explicit_v1')
-        view['plugins'][0]['tools'].clear()
-        self.assertEqual(len(catalog.describe()['plugins'][0]['tools']),4)
+        floor = next(p for p in view['plugins'] if p['id'] == 'rc_floor')
+        floor['tools'].clear()
+        self.assertEqual(len(next(p for p in catalog.describe()['plugins'] if p['id'] == 'rc_floor')['tools']),4)
 
     def test_second_plugin_executes_through_unchanged_application_and_controller(self):
         self.floor()
@@ -187,11 +189,12 @@ class PluginTests(unittest.TestCase):
             tree=ast.parse((ROOT/file).read_text(encoding='utf-8-sig'))
             imports=[n.module for n in ast.walk(tree) if isinstance(n,ast.ImportFrom) and n.module]
             imports += [a.name for n in ast.walk(tree) if isinstance(n,ast.Import) for a in n.names]
-            self.assertFalse(any(name.startswith(('tools.floor','legacy')) for name in imports),file)
+            self.assertFalse(any(name.startswith(('tools.floor','tools.column','legacy')) for name in imports),file)
 
     def test_inventory_cli_is_valid_utf8_without_api_configuration(self):
         result=subprocess.run([sys.executable,'-m','examples.plugin_inventory'],cwd=ROOT,capture_output=True,check=True)
-        self.assertEqual(json.loads(result.stdout.decode('utf-8'))['plugins'][0]['id'],'rc_floor')
+        self.assertEqual({p['id'] for p in json.loads(result.stdout.decode('utf-8'))['plugins']},
+                         {'rc_floor', 'rc_column'})
 
     def test_explicit_design_and_separate_report_reuse_the_loaded_plugin(self):
         gateway=Mock();gateway.complete.return_value=(proposal(slab_thickness=(100,{'quote':'100mm','index':0})),{})
