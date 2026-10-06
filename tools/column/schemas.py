@@ -4,7 +4,7 @@ from .materials import CANDIDATE_DIAMETERS_MM, CONCRETE_FC_MPA
 
 
 def object_schema(properties):
-    return {"type": "object", "properties": properties,
+    return {"type": "object", "properties": dict(properties),
             "required": list(properties), "additionalProperties": False}
 
 
@@ -101,3 +101,12 @@ DESIGN_REPORT_SCHEMA = object_schema({
                  "maxItems": len(CANDIDATE_DIAMETERS_MM)},
     "selection_policy": NONEMPTY,
 })
+REFERENCE_SCHEMA = {"type": "string", "pattern": r"^column-[0-9a-f]{32}$"}
+CHECK_PARAMETERS = {"type": "object", "oneOf": [
+    CHECK_MODEL_PARAMETERS, object_schema({"design_result_ref": REFERENCE_SCHEMA}),
+]}
+DESIGN_OUTPUT_SCHEMA = object_schema({
+    **DESIGN_REPORT_SCHEMA["properties"], "design_result_ref": REFERENCE_SCHEMA,
+})
+CHECK_OUTPUT_SCHEMA = object_schema(REPORT_SCHEMA["properties"])
+CHECK_OUTPUT_SCHEMA["properties"]["design_result_ref"] = REFERENCE_SCHEMA
