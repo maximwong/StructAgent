@@ -1,6 +1,6 @@
 # 本地Engineering Plugin接入
 
-阶段14增加本地插件目录发现和API v1。Controller核心不修改，旧CLI注册函数保持可用，旧计算和LISP不迁移。正常安装目录`plugins/`当前只启用RC Floor；测试Echo位于`tests/fixtures/plugins/echo/`，不会随正常启动启用，不代表新增结构设计能力。
+阶段14增加本地插件目录发现和API v1。Controller核心不修改，旧CLI注册函数保持可用，旧计算和LISP不迁移。阶段15的正常安装目录`plugins/`启用RC Floor和RC Column；柱插件提供教学纯轴压设计与校核，没有网页、CAD、报告或自然语言声明。测试Echo位于`tests/fixtures/plugins/echo/`，不会随正常启动启用，不代表新增结构设计能力。
 
 ## 查看能力与启动
 
@@ -19,6 +19,9 @@
 ```text
 plugins/
   rc_floor/
+    plugin.json
+    plugin.py
+  rc_column/
     plugin.json
     plugin.py
 ```
@@ -48,4 +51,6 @@ plugins/
 
 专项测试将RC Floor和Echo复制到临时目录，由同一个应用工厂、模拟云响应和不变的Controller执行Echo。也运行真实楼盖设计、只读Check和DOCX；CAD明确模拟。增加目录即可发现能力，不修改应用专业分支或Controller。
 
-真实柱/基础应先审计已有脚本，制作Adapter、Schema、LanguageProfile和Workflow，再新增插件声明。Echo不作为工程验算。正式PDF、完整输入的可选文字描述、网页调整授权另行安排。结果见[阶段14报告](stages/phase-14.md)。
+阶段15已接入真实柱计算插件。没有可复用柱脚本，因此先核对条款、固定独立参考数据，再实现确定性计算模块；设计和校核通过Adapter接入统一Tool。插件只声明已实现工具及工作流，不必为了注册工具而提供LanguageProfile或WebBinding。完整JSON经本地校验后交给原Controller，设计引用通过ResultBinding传给校核；楼盖绑定继续使用原网页。用[柱工具CLI](column-tool.md)验证第二种工程能力，依据及范围见[工程说明](column-basis.md)。
+
+未来基础等专业仍须审计已有脚本或锁定新算法依据，再实现Tool和Workflow。Echo不作为工程验算。正式PDF、完整输入的可选文字描述、网页调整授权另行安排。阶段14历史结果见[原报告](stages/phase-14.md)。

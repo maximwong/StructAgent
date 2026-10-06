@@ -1,0 +1,15 @@
+{
+  "project_id": "TEACHING-COLUMN-SLENDER",
+  "tool": "design_column",
+  "context": {"unit_system": "mm,kN,kN.m,MPa", "design_code": "GB/T 50010-2010(2024);GB 55008-2021"},
+  "parameters": {
+    "model": {
+      "section": {"b_mm": 300, "h_mm": 300, "cover_to_outer_tie_mm": 30},
+      "effective_length": {"l0_mm": 6000, "source": "匿名教学假设：两个主轴控制有效长度均不超过6000mm；非实际框架分析。", "covers_both_principal_axes": true},
+      "actions": {"N_kN": 1170, "Mx_kN_m": 0, "My_kN_m": 0, "Vx_kN": 0, "Vy_kN": 0, "N_includes_gamma0": true, "combination_source": "匿名教学组合SLENDER-ULS-1：N为已含gamma0最终设计值，所有分量属于该同一组合；理想纯轴压假设。"},
+      "materials": {"concrete": "C30", "longitudinal_steel": "HRB400", "tie_steel": "HPB300"},
+      "ties": {"configuration": "single_closed_rectangular", "diameter_mm": 8, "spacing_mm": 200},
+      "scope": {"purpose": "teaching", "loading": "static", "seismic": false, "ideal_axial_compression": true, "gamma_Rd": 1}
+    }
+  }
+}

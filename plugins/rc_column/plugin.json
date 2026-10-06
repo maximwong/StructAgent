@@ -1,0 +1,10 @@
+{
+  "id": "rc_column",
+  "name": "RC Column",
+  "version": "1.0.0",
+  "api_version": 1,
+  "description": "教学非抗震静力理想轴压矩形柱固定截面设计及只读实配校核；不提供CAD或网页能力。",
+  "entry_point": "plugin.py:create_plugin",
+  "tools": ["design_column", "check_column_design"],
+  "enabled": true
+}

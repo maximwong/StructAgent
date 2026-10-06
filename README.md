@@ -20,6 +20,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 
 阶段14增加本地`plugins/*/plugin.json`发现与加载。楼盖工具、语言配置、工作流和网页回调通过插件接入，应用及Controller不导入楼盖模块。用`python -m examples.plugin_inventory`查看能力，测试Echo插件验证增加能力无需改Controller。正常网页仍只支持一个专业，真实柱/基础另行审计接入。见[插件说明](docs/plugins.md)与[阶段14报告](docs/stages/phase-14.md)。
 
+阶段15新增第二种真实工程插件 RC Column：在固定矩形截面上完成教学范围的非抗震、静力、理想纯轴压四角纵筋设计及实际方案独立校核。通过完整JSON输入和原Controller执行“设计→校核”，无需API、AutoCAD或楼盖模板。柱工具不接入网页、自然语言、CAD或计算书；PASS仅表示本版声明检查项通过。见[柱工具使用说明](docs/column-tool.md)、[工程依据与独立参考](docs/column-basis.md)及[阶段15报告](docs/stages/phase-15.md)。
+
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
 阶段5.1已修复材料字段归属和超时诊断，补齐 [历史产物归档](docs/artifact-archive.md) 与 [离线安装和制品哈希](docs/offline-deployment.md)。真实链路、取消/超时及离线新环境验证通过，详见 [修复报告](docs/stages/phase-5.1.md)。
@@ -36,8 +38,9 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 - `agent/parameter_parser.py`、`llm/`：通用参数解析器、插件提供的语言配置及有总时限的DeepSeek接口。
 - `agent/controller.py`、`workflow.py`、`state.py`：通过Registry执行声明式工作流，记录每一步结果与失败/中断状态；`agent/revision.py`提供可配置的受限工具组合。
 - `app.py`、`ui/`：本机浏览器界面、后台工作流执行、历史记录及受控恢复/打开图纸，无新增依赖。
-- `plugins/`：本地专业插件声明及工厂，正常安装仅启用RC Floor。
-- `examples/`、`tests/`：可运行示例及276项核心、插件、设计、校核、受限重设计、计算书、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
+- `tools/column/`：独立材料表、确定性纯轴压计算、设计及校核Tool、不可覆盖的设计引用；检查实际配筋时不重新选筋。
+- `plugins/`：本地专业插件声明及工厂，启用RC Floor与RC Column；网页仍仅使用楼盖绑定。
+- `examples/`、`tests/`：可运行示例及313项核心、插件、楼盖/柱设计及校核、受限重设计、计算书、CAD、状态、解析、Controller、归档、部署、Demo与UI测试，另有87项旧程序回归。
 - `demos/`：A/B/C自然语言、预期参数及已冻结的完整设计/CAD场景基线。
 - `AGENTS.md`、`CONTRIBUTING.md`：多设备和多模型协作约定。
 
@@ -112,7 +115,7 @@ python -m examples.agent_workflow --template office_floor_demo_v1 --text "设计
 
 ## 协作方向
 
-阶段8已冻结稳定Demo；本分支已接入完整参数、独立截面校核、受限循环、DOCX及本地插件发现，下一步验证第二种真实专业能力。Controller只依赖Registry、Schema、ToolResult和Project State；新增能力通过插件注册工具、语言配置及工作流接入。
+阶段8已冻结稳定Demo；本分支已接入完整参数、独立截面校核、受限循环、DOCX、本地插件发现及教学纯轴压柱能力。Controller只依赖Registry、Schema、ToolResult和Project State；新增能力通过插件注册工具、语言配置及工作流接入。柱插件当前只提供结构化CLI入口，不扩大既有网页或楼盖工程范围。
 
 请通过 Issue 记录任务，使用独立分支和 Pull Request 提交修改，在PR中说明影响范围、验证命令和结果。工程算法变更需要给出样例对比和必要的校核依据。参见 [协作指南](CONTRIBUTING.md)。
 
