@@ -5,7 +5,8 @@ import json
 from pathlib import Path
 import secrets
 import socket
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
+from core.json_data import loads_json
 
 from .service import UIError
 
@@ -82,6 +83,7 @@ class Handler(BaseHTTPRequestHandler):
             assets = {"/": ("index.html", "text/html; charset=utf-8"),
                       "/app.js": ("app.js", "text/javascript; charset=utf-8"),
                       "/full-input.js": ("full-input.js", "text/javascript; charset=utf-8"),
+                      "/structured-input.js": ("structured-input.js", "text/javascript; charset=utf-8"),
                       "/style.css": ("style.css", "text/css; charset=utf-8")}
             if path in assets:
                 name, content_type = assets[path]
@@ -89,7 +91,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, body, content_type)
             self._auth()
             if path == "/api/status":
-                return self.reply(200, self.server.service.status())
+                query = parse_qs(urlsplit(self.path).query)
+                return self.reply(200, self.server.service.status(query.get('profession', [None])[0], query.get('project_id', [None])[0]))
+            if path == '/api/professions':
+                return self.reply(200, self.server.service.professions())
             if path == "/api/input-form" and self.server.service.input_form:
                 return self.reply(200, self.server.service.input_form())
             if path.startswith('/api/jobs/') and path.endswith('/report-download') and self.server.service.reports:
@@ -112,11 +117,19 @@ class Handler(BaseHTTPRequestHandler):
                 raise UIError("请求格式不正确。", 415)
             length = int(self.headers.get("Content-Length", "0"))
             if not 0 < length <= 20000:
+                # Drain only a bounded small body before returning 413; on Windows an
+                # unread body can reset the connection and hide the rejection response.
+                if 20000 < length <= 65536:
+                    self.rfile.read(length)
                 raise UIError("输入内容过长或为空。", 413)
-            body = json.loads(self.rfile.read(length).decode("utf-8"))
+            body = loads_json(self.rfile.read(length).decode("utf-8"))
             path = urlsplit(self.path).path
             if path == "/api/jobs":
                 return self.reply(202, self.server.service.start(body))
+            if path == '/api/structured-import':
+                return self.reply(200, self.server.service.import_structured(body))
+            if path == '/api/structured-validate':
+                return self.reply(200, {'envelope': self.server.service.validate_structured(body)})
             for suffix,action in (('/generate-report','start'),('/open-report','open')):
                 if path.startswith('/api/jobs/') and path.endswith(suffix) and self.server.service.reports:
                     if body != {}:

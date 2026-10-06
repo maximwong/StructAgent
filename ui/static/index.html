@@ -4,24 +4,28 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="structagent-token" content="__SESSION_TOKEN__">
   <title>StructAgent · 结构设计助手</title>
-  <link rel="stylesheet" href="/style.css"><script src="/full-input.js" defer></script><script src="/app.js" defer></script>
+  <link rel="stylesheet" href="/style.css"><script src="/full-input.js" defer></script><script src="/structured-input.js" defer></script><script src="/app.js" defer></script>
 </head>
 <body>
 <header><div class="brand">SA</div><div><h1>StructAgent</h1><p>结构设计助手 · 本机演示版</p></div><span id="connection" class="tag">连接中</span></header>
 <main>
   <section class="card input-card" aria-labelledby="request-title">
-    <h2 id="request-title">描述你的设计要求</h2><p class="muted">直接输入自然语言，无需命令、引号或固定句式。</p>
+    <label for="profession">选择专业</label><select id="profession" aria-label="选择专业"></select>
+    <h2 id="request-title">描述你的设计要求</h2><p id="input-help" class="muted">直接输入自然语言，无需命令、引号或固定句式。</p>
     <form id="design-form">
       <label for="project-name">项目名称</label><input id="project-name" maxlength="80" value="办公楼演示项目" required>
+      <div id="floor-input">
       <label for="input-mode">工程参数来源</label><select id="input-mode"><option value="template">已确认的办公楼演示模板</option><option value="explicit">完整工程参数（不使用模板）</option></select>
       <label for="request">设计要求</label><textarea id="request" maxlength="4000" rows="7" required placeholder="例如：算一下办公楼楼盖，主梁方向跨6米、次梁方向跨6米，混凝土C30、梁纵筋HRB400，活载按每平方米2.8千牛考虑。"></textarea>
       <div class="examples"><span>填入案例</span><button type="button" data-case="A">A · 6m柱网</button><button type="button" data-case="B">B · 5.4m柱网</button><button type="button" data-case="C">C · C35 / 活载3.0</button></div>
       <div class="template" id="template-panel"><label class="check"><input type="checkbox" id="template-confirmed"><span>使用办公楼单向板肋梁楼盖演示模板</span></label><p>主梁3跨、次梁5跨；板厚80mm；次梁200×400mm、主梁250×600mm；次梁间距为主梁轴跨的1/3。板筋及箍筋HPB300，恒载与支承沿用已确认模板。</p></div>
       <div id="full-input-panel" hidden><p class="muted small">填写或导入完整参数。可直接说“按表单设计”，也可描述板厚、梁截面等修改；缺项会明确提示，程序不会猜测。</p><div class="examples"><button id="load-input-example" type="button">载入已验证案例作为起点</button><button id="clear-full-input" type="button">清空参数</button></div><label for="import-model">导入工程参数文件</label><input id="import-model" type="file" accept=".json,application/json"><p id="full-input-notice" class="small muted"></p><div id="full-input-fields"></div></div>
+      </div>
+      <div id="structured-panel" hidden><p id="structured-notice" class="small muted"></p><label for="structured-mode">操作模式（设计与单步校核互斥）</label><select id="structured-mode"></select><div id="structured-examples" class="examples"></div><label for="structured-import">导入完整JSON请求（保留工具、项目标识和单位规范）</label><input id="structured-import" type="file" accept=".json,application/json"><button id="structured-clear" type="button">清空全部参数</button><div id="structured-fields"></div></div>
       <button id="start" class="primary" type="submit">开始设计</button><p id="config" class="muted small"></p>
     </form>
     <div id="notice" role="alert" hidden></div>
-    <details><summary>使用说明</summary><p>先打开并保持AutoCAD空闲。首次使用按本机部署说明配置API和CAD脚本。结果需要工程人员复核，当前采用已确认的教学演示模型。</p><p>关闭或刷新网页不会取消正在执行的任务。每次开始都会保存为新的运行记录。</p></details>
+    <details><summary>使用说明</summary><p id="usage-scope">先打开并保持AutoCAD空闲。首次使用按本机部署说明配置API和CAD脚本。结果需要工程人员复核，当前采用已确认的教学演示模型。</p><p>关闭或刷新网页不会取消正在执行的任务。每次开始都会保存为新的运行记录。</p></details>
     <label for="history">最近运行</label><select id="history"><option value="">暂无运行记录</option></select>
     <div class="utilities"><button id="recover" type="button">检查并恢复CAD</button><button id="stop" type="button">退出程序</button></div>
   </section>
@@ -31,11 +35,11 @@
       <div id="issues" aria-live="polite"></div>
     </div>
     <div class="card"><h2>解析参数</h2><p id="parameter-empty" class="muted">参数确认后将显示数值及原文依据。</p><div class="parameter-table"><table id="parameters" hidden><thead><tr><th>参数</th><th>数值</th><th>原文依据</th></tr></thead><tbody></tbody></table></div></div>
-    <div class="card"><h2>独立校核</h2><p id="check-summary">尚未完成独立校核</p><p class="small muted">仅复核实配截面与抗剪约束；不包含独立内力分析及规范全项审查。</p><details id="check-details" hidden><summary>范围与逐项结果</summary><p id="check-coverage"></p><div class="parameter-table"><table class="full-model"><thead><tr><th>检查项</th><th>数值与限值</th><th>结果</th></tr></thead><tbody id="check-rows"></tbody></table></div></details></div>
-    <div class="card"><div class="row"><h2>设计与图纸</h2><button id="open-cad" class="primary compact" disabled>打开CAD图纸</button></div><p id="design-summary" class="muted">尚未完成计算</p><p id="cad-status">尚未生成图纸</p><p id="drawing-path" class="small path"></p><details id="warning-box" hidden><summary>设计提示与校核警告</summary><ul id="warnings"></ul></details></div>
+    <div class="card"><h2>独立校核</h2><p id="check-summary">尚未完成独立校核</p><p id="check-scope" class="small muted">仅复核实配截面与抗剪约束；不包含独立内力分析及规范全项审查。</p><details id="check-details" hidden><summary>范围与逐项结果</summary><p id="check-coverage"></p><p id="check-basis" class="small muted"></p><div class="parameter-table"><table class="full-model"><thead><tr><th>检查项及依据</th><th>数值与限值</th><th>结果</th></tr></thead><tbody id="check-rows"></tbody></table></div></details></div>
+    <div class="card"><div class="row"><h2 id="design-result-title">设计与图纸</h2><button id="open-cad" class="primary compact" disabled>打开CAD图纸</button></div><p id="design-summary" class="muted">尚未完成计算</p><p id="cad-status">尚未生成图纸</p><p id="drawing-path" class="small path"></p><details id="warning-box" hidden><summary>设计提示与校核警告</summary><ul id="warnings"></ul></details></div>
     <div class="card"><h2>计算书</h2><p id="report-status" aria-live="polite">设计及独立校核通过后可生成Word计算书。</p><div class="utilities"><button id="generate-report" disabled>生成计算书</button><button id="open-report" disabled>打开计算书</button><button id="download-report" disabled>下载计算书</button></div><p id="report-summary" class="small muted"></p><p id="report-run-id" class="small muted"></p></div>
     <div class="card"><h2>工具调用日志</h2><ul id="tool-log" class="log"><li class="muted">暂无工具调用</li></ul><p id="run-id" class="small muted"></p></div>
   </section>
 </main>
-<footer>本机计算与绘图 · 参数由云端模型解析 · 每次运行独立保存</footer>
+<footer id="mode-footer">本机计算与绘图 · 参数由云端模型解析 · 每次运行独立保存</footer>
 </body></html>

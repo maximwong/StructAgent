@@ -18,6 +18,8 @@ class ReportService:
         self.failures = {}
 
     def _source(self, record, snapshot):
+        if record.get('input_mode') == 'structured':
+            raise UIError('此专业未提供计算书操作。', 409)
         return self.source(self.service.root, snapshot, self.service._read_tool_result)
 
     def _records(self, job_id):

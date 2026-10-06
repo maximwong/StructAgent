@@ -13,7 +13,8 @@ from pathlib import Path
 import re
 import sys
 
-from .plugin_base import PluginContext, PluginContribution, PluginWebBinding
+from .plugin_base import (PluginContext, PluginContribution, PluginWebBinding,
+                          StructuredWebBinding, StructuredWebOperation)
 from .tool_registry import ToolRegistry
 
 IDENTIFIER = re.compile(r'[a-z][a-z0-9_]*\Z')
@@ -111,6 +112,8 @@ class PluginCatalog:
     profiles: tuple
     plugins: tuple
     web_bindings: tuple
+    structured_web: tuple = ()
+    web_owners: tuple = ()
 
     def web_binding(self):
         if len(self.web_bindings) != 1:
@@ -145,7 +148,7 @@ def load_plugins(directory, context):
     if not isinstance(context, PluginContext):
         raise TypeError('PluginContext is required.')
     manifests = discover_plugins(directory)  # Validate all metadata before running any plugin code.
-    registry, workflows, profiles, web, descriptions = ToolRegistry(), [], [], [], []
+    registry, workflows, profiles, web, descriptions, structured, web_owners = ToolRegistry(), [], [], [], [], [], []
     workflow_names, entry_tools, profile_names, explicit_names = set(), set(), set(), set()
     for location, manifest in manifests:
         if not manifest.get('enabled', True):
@@ -193,7 +196,30 @@ def load_plugins(directory, context):
                         or report.steps[0].name != 'report' or report.steps[0].external_effects):
                     raise PluginLoadError('invalid_report_binding', plugin_id)
                 web.append(binding)
+                web_owners.append({'id': plugin_id, 'name': manifest['name']})
                 explicit_names.add(binding.explicit_profile)
+            if not isinstance(contribution.structured_web, tuple):
+                raise PluginLoadError('invalid_structured_web_binding', plugin_id)
+            for binding in contribution.structured_web:
+                if (not isinstance(binding, StructuredWebBinding) or binding.id != plugin_id
+                        or not IDENTIFIER.fullmatch(binding.id)
+                        or any(b.id == binding.id for b in structured)
+                        or not isinstance(binding.name, str) or not binding.name.strip()
+                        or not isinstance(binding.operations, tuple) or not binding.operations
+                        or any(not callable(getattr(binding, name)) for name in ('form', 'request', 'presentation'))):
+                    raise PluginLoadError('invalid_structured_web_binding', plugin_id)
+                operation_ids = set()
+                for operation in binding.operations:
+                    workflow = next((w for w in contribution.workflows if w.name == getattr(operation, 'workflow', None)), None)
+                    if (not isinstance(operation, StructuredWebOperation)
+                            or not IDENTIFIER.fullmatch(operation.id) or operation.id in operation_ids
+                            or not isinstance(operation.name, str) or not operation.name.strip()
+                            or workflow is None or workflow.steps[0].tool != operation.tool
+                            or operation.tool not in manifest['tools']
+                            or any(step.external_effects for step in workflow.steps)):
+                        raise PluginLoadError('invalid_structured_web_operation', plugin_id)
+                    operation_ids.add(operation.id)
+                structured.append(binding)
             descriptions.append({k: manifest[k] for k in ('id', 'name', 'version', 'api_version', 'description', 'tools')})
         except PluginLoadError:
             raise
@@ -201,4 +227,4 @@ def load_plugins(directory, context):
             raise PluginLoadError('plugin_composition_failed', plugin_id) from None
     if not descriptions:
         raise PluginLoadError('no_enabled_plugins')
-    return PluginCatalog(registry, tuple(workflows), tuple(profiles), tuple(descriptions), tuple(web))
+    return PluginCatalog(registry, tuple(workflows), tuple(profiles), tuple(descriptions), tuple(web), tuple(structured), tuple(web_owners))
