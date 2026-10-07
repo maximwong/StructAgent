@@ -106,9 +106,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, self.server.service.view(path.removeprefix("/api/jobs/")))
             raise UIError("找不到此页面。", 404)
         except UIError as exc:
-            self.reply(exc.status, {"error": str(exc)})
-        except (OSError, ValueError, KeyError):
-            self.reply(500, {"error": "本机运行记录无法读取，请保留现场供检查。"})
+            self.reply(exc.status, {"error": str(exc), **({'code': exc.code} if exc.code else {})})
+        except (OSError, ValueError, KeyError, TypeError):
+            self.reply(500, {"error": "本机运行记录无法读取，请保留现场供检查。", 'code': 'ui_record_invalid'})
 
     def do_POST(self):
         try:

@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 import app
 from core.json_data import loads_json
 from core.persistence import write_json
-from core.plugin_base import PluginContext, StructuredWebOperation
+from core.plugin_base import PluginContext, StructuredWebOperation, StructuredWebBinding
 from core.plugin_loader import load_plugins, PluginLoadError
 from ui.server import LocalServer
 from ui.service import UIError
@@ -97,6 +97,33 @@ class ColumnUITests(ColumnUIFixture):
         self.assertFalse(wrong['snapshot']['success'])
         self.assertIsNone(wrong['summary'])
         self.assertEqual(wrong['snapshot']['errors'][0]['code'], 'invalid_column_reference')
+
+    def test_reference_presents_verified_original_input_and_sources(self):
+        request = self.envelope()
+        _, designed = self.run_local(request)
+        reference = {'project_id': request['project_id'], 'tool': 'check_column_design', 'context': request['context'],
+                     'parameters': {'design_result_ref': designed['summary']['design_result_ref']}}
+        job, checked = self.run_local(reference)
+        source = {row['label']: row['value'] for row in checked['display_sources']}
+        self.assertIn('已核验的原设计输入', source['输入来源'])
+        self.assertIn('不是当前引用请求', source['输入来源'])
+        self.assertEqual(source['轴压力 N（kN）'], '1400')
+        self.assertEqual(source['双主轴控制有效长度 l0（mm）'], '900')
+        self.assertEqual(source['荷载组合来源'], request['parameters']['model']['actions']['combination_source'])
+        self.assertEqual(source['有效长度来源'], request['parameters']['model']['effective_length']['source'])
+        with patch('core.tool_base.EngineeringTool.execute', side_effect=AssertionError('Read only view')):
+            self.assertEqual(self.service.view(job)['display_sources'], checked['display_sources'])
+
+    def test_failure_display_is_chinese_and_keeps_raw_tool_result(self):
+        _, failed = self.run_local(self.envelope('check-fail'))
+        self.assertTrue(any('轴压承载力未通过' in error and '1400' in error and '1357.56' in error
+                            for error in failed['display_errors']))
+        self.assertTrue(all('result.checks' not in error and 'ideal axial' not in error
+                            for error in failed['display_errors']))
+        self.assertEqual(failed['snapshot']['errors'][0]['code'], 'column_check_failed')
+        self.assertEqual(failed['snapshot']['errors'][0]['path'], ['result', 'checks', 0])
+        raw = loads_json(Path(failed['snapshot']['tool_calls'][0]['result_path']).read_text(encoding='utf-8'))
+        self.assertEqual(raw['result']['checks'][0]['label'], 'ideal axial compression capacity')
 
     def test_no_old_success_on_setup_or_persistence_failure(self):
         request = self.envelope()
@@ -293,8 +320,69 @@ class ColumnUITests(ColumnUIFixture):
             with patch.object(loader, '_factory', substituted), self.assertRaises(PluginLoadError):
                 load_plugins(ROOT/'plugins', PluginContext(self.root))
 
+    def test_legacy_and_structured_profession_identity_cannot_overlap(self):
+        import core.plugin_loader as loader
+        factory = loader._factory
+        def substituted(directory, manifest):
+            actual = factory(directory, manifest)
+            def build(context):
+                contribution = actual(context)
+                if manifest['id'] != 'rc_floor': return contribution
+                # This operation and tool belong to the floor contribution and
+                # satisfy the structured workflow contract; only UI identity conflicts.
+                binding = StructuredWebBinding('rc_floor', '重复楼盖专业',
+                    (StructuredWebOperation('report', '计算书', 'artifact_report', 'generate_floor_report'),),
+                    lambda: {}, lambda operation, envelope: envelope, lambda *args: {})
+                return replace(contribution, structured_web=(binding,))
+            return build
+        with patch.object(loader, '_factory', substituted), self.assertRaises(PluginLoadError) as error:
+            load_plugins(ROOT/'plugins', PluginContext(self.root))
+        self.assertEqual(error.exception.code, 'duplicate_web_profession')
+
 
 class ColumnHTTPTests(ColumnUIFixture):
+    def test_missing_sql_and_bad_job_records_are_local_record_errors(self):
+        job, view = self.run_local(self.envelope())
+        second, latest = self.run_local(self.envelope())
+        path = self.service._path(job)
+        saved = loads_json(path.read_text(encoding='utf-8'))
+        original_state = self.service.state.get(view['snapshot']['run_id'])
+        server = LocalServer(self.service, 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
+        self.addCleanup(server.server_close); self.addCleanup(server.shutdown)
+        def get(path):
+            connection = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=5)
+            connection.request('GET', path, headers={'X-StructAgent-Token': server.token})
+            response = connection.getresponse(); data = json.loads(response.read()); connection.close()
+            return response.status, data
+        with patch('core.tool_base.EngineeringTool.execute', side_effect=AssertionError('No tools on reading')):
+            changed = deepcopy(saved); changed['run_id'] = 'f'*32
+            write_json(path, changed)
+            status, bad = get('/api/jobs/'+job)
+            self.assertEqual(status, 200)
+            self.assertEqual(bad['snapshot']['status'], 'invalid_output')
+            self.assertFalse(bad['snapshot']['success'])
+            self.assertIsNone(bad['summary']); self.assertIsNone(bad['check'])
+            self.assertTrue(bad['check_issue']); self.assertFalse(bad['can_open'])
+            self.assertNotEqual(bad['snapshot'].get('run_id'), latest['snapshot']['run_id'])
+            self.assertEqual(self.service.state.get(view['snapshot']['run_id']), original_state)
+            self.assertEqual(loads_json(path.read_text(encoding='utf-8')), changed)
+            for damaged in [[], None, {'id': job}, {**saved, 'created': True},
+                            {**saved, 'envelope': None}, {**saved, 'profession': []}]:
+                write_json(path, damaged)
+                code, error = get('/api/jobs/'+job)
+                self.assertEqual(code, 409)
+                self.assertEqual(error['code'], 'ui_record_invalid')
+                self.assertIn('本机运行记录', error['error'])
+                self.assertEqual(get('/health')[0], 200)
+                self.assertEqual(get('/api/status?profession=rc_column')[0], 200)
+            path.write_bytes(b'\xff')
+            self.assertEqual(get('/api/jobs/'+job)[1]['code'], 'ui_record_invalid')
+            path.unlink()
+            self.assertEqual(get('/api/jobs/'+job)[1]['code'], 'ui_record_invalid')
+            self.assertEqual(get('/api/jobs/'+second)[1]['snapshot']['run_id'], latest['snapshot']['run_id'])
+        write_json(path, saved)
+
     def test_http_strict_import_and_direct_payload(self):
         server = LocalServer(self.service, 0)
         thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()

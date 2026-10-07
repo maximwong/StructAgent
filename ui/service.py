@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import sqlite3
 import threading
 import time
 from uuid import uuid4
@@ -19,8 +20,9 @@ from .check_presentation import present_check
 
 
 class UIError(ValueError):
-    def __init__(self, message, status=400):
+    def __init__(self, message, status=400, code=None):
         self.status = status
+        self.code = code
         super().__init__(message)
 
 
@@ -70,10 +72,35 @@ class RunService:
         return self.jobs / (job_id + ".json")
 
     def _record(self, job_id):
+        path = self._path(job_id)
         try:
-            return loads_json(self._path(job_id).read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            raise UIError("运行记录不可读取，请保留本机记录供检查。", 404) from None
+            record = loads_json(path.read_text(encoding="utf-8"))
+            if (not isinstance(record, dict) or record.get('id') != job_id
+                    or any(not isinstance(record.get(key), str) or not record[key].strip()
+                           for key in ('project_name', 'project_id'))
+                    or type(record.get('created')) not in (int, float)
+                    or 'run_id' in record and (not isinstance(record['run_id'], str)
+                        or re.fullmatch(r'[0-9a-f]{32}', record['run_id']) is None)):
+                raise ValueError('Invalid job identity or shape.')
+            if record.get('input_mode') == 'structured':
+                profession, envelope = record.get('profession'), record.get('envelope')
+                if (not isinstance(profession, str) or profession not in self.structured_bindings
+                        or not isinstance(record.get('operation'), str)
+                        or record['operation'] not in {o.id for o in self.structured_bindings[profession].operations}
+                        or not isinstance(envelope, dict) or envelope.get('project_id') != record['project_id']
+                        or not isinstance(envelope.get('context'), dict)
+                        or not isinstance(envelope.get('parameters'), dict)):
+                    raise ValueError('Invalid structured job shape.')
+            return record
+        except (OSError, ValueError, TypeError, KeyError):
+            raise UIError("本机运行记录不可读取或结构不完整，请保留记录供检查。", 409, 'ui_record_invalid') from None
+
+    @staticmethod
+    def _unconfirmed_snapshot():
+        message = '本次绑定的运行记录缺失或无法确认，不能显示通过；请保留本机记录供检查。'
+        return {'status': 'invalid_output', 'success': False, 'steps': {}, 'tool_calls': [],
+                'artifacts': [], 'warnings': [], 'errors': [{'code': 'ui_record_invalid', 'message': message, 'path': []}],
+                'record_issue': message}
 
     def _ensure_idle(self):
         if self.stopping:
@@ -244,10 +271,13 @@ class RunService:
             if not record.get('run_id') or fallback.get('state_saved') is False:
                 return fallback
         if record.get('run_id'):
-            snapshot = self.state.get(record['run_id'])
-            if snapshot['project_id'] != record['project_id']:
-                raise UIError('运行归属不一致，请保留记录供检查。',409)
-            return snapshot
+            try:
+                snapshot = self.state.get(record['run_id'])
+                if snapshot['project_id'] != record['project_id']:
+                    raise ValueError('Run project differs.')
+                return snapshot
+            except (KeyError, ValueError, TypeError, AttributeError, OSError, sqlite3.Error):
+                return self._unconfirmed_snapshot()
         if record.get('input_mode') == 'structured':
             return {'status': 'queued' if self.active == record['id'] else 'interrupted', 'success': False,
                     'steps': {}, 'tool_calls': [], 'artifacts': [], 'errors': [], 'warnings': []}
@@ -272,12 +302,16 @@ class RunService:
         with self.lock:
             record = self._record(job_id)
             snapshot = self._snapshot(record)
+            if snapshot.get('record_issue'):
+                return {**record, 'snapshot': snapshot, 'summary': None, 'check': None,
+                        'display_summary': None, 'display_sources': [], 'display_errors': [],
+                        'check_issue': snapshot['record_issue'], 'report': None, 'can_open': False}
             if record.get('input_mode') == 'structured':
                 issue, presented = None, {'summary': None, 'check': None}
                 try:
                     binding = self.structured_bindings[record['profession']]
                     presented = binding.presentation(record, snapshot, self._read_tool_result)
-                except (OSError, ValueError, KeyError, TypeError, RuntimeError, ArithmeticError):
+                except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError, ArithmeticError):
                     issue = '柱结果不可用或归属、输入、逐项判定与来源不一致，无法确认通过；请保留记录供检查。'
                 if issue:
                     snapshot = {**snapshot, 'success': False, 'status': 'invalid_output'}
@@ -297,7 +331,7 @@ class RunService:
                 if path.name.endswith(".failure.json"):
                     continue
                 try:
-                    data = json.loads(path.read_text(encoding="utf-8"))
+                    data = self._record(path.stem)
                     if profession and data.get('profession', self.legacy_profession['id']) != profession:
                         continue
                     if project_id and data.get('project_id') != project_id:

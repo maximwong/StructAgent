@@ -26,6 +26,7 @@
     </form>
     <div id="notice" role="alert" hidden></div>
     <details><summary>使用说明</summary><p id="usage-scope">先打开并保持AutoCAD空闲。首次使用按本机部署说明配置API和CAD脚本。结果需要工程人员复核，当前采用已确认的教学演示模型。</p><p>关闭或刷新网页不会取消正在执行的任务。每次开始都会保存为新的运行记录。</p></details>
+    <label for="history-project">按项目标识筛选历史</label><input id="history-project" maxlength="80" placeholder="留空显示本专业全部项目"><button id="filter-history" type="button">筛选历史</button>
     <label for="history">最近运行</label><select id="history"><option value="">暂无运行记录</option></select>
     <div class="utilities"><button id="recover" type="button">检查并恢复CAD</button><button id="stop" type="button">退出程序</button></div>
   </section>
@@ -35,6 +36,7 @@
       <div id="issues" aria-live="polite"></div>
     </div>
     <div class="card"><h2>解析参数</h2><p id="parameter-empty" class="muted">参数确认后将显示数值及原文依据。</p><div class="parameter-table"><table id="parameters" hidden><thead><tr><th>参数</th><th>数值</th><th>原文依据</th></tr></thead><tbody></tbody></table></div></div>
+    <div id="effective-input-card" class="card" hidden><h2>校核采用的工程输入及来源</h2><div class="parameter-table"><table class="full-model"><thead><tr><th>参数或来源</th><th>已核验数值及说明</th></tr></thead><tbody id="effective-input-rows"></tbody></table></div></div>
     <div class="card"><h2>独立校核</h2><p id="check-summary">尚未完成独立校核</p><p id="check-scope" class="small muted">仅复核实配截面与抗剪约束；不包含独立内力分析及规范全项审查。</p><details id="check-details" hidden><summary>范围与逐项结果</summary><p id="check-coverage"></p><p id="check-basis" class="small muted"></p><div class="parameter-table"><table class="full-model"><thead><tr><th>检查项及依据</th><th>数值与限值</th><th>结果</th></tr></thead><tbody id="check-rows"></tbody></table></div></details></div>
     <div class="card"><div class="row"><h2 id="design-result-title">设计与图纸</h2><button id="open-cad" class="primary compact" disabled>打开CAD图纸</button></div><p id="design-summary" class="muted">尚未完成计算</p><p id="cad-status">尚未生成图纸</p><p id="drawing-path" class="small path"></p><details id="warning-box" hidden><summary>设计提示与校核警告</summary><ul id="warnings"></ul></details></div>
     <div class="card"><h2>计算书</h2><p id="report-status" aria-live="polite">设计及独立校核通过后可生成Word计算书。</p><div class="utilities"><button id="generate-report" disabled>生成计算书</button><button id="open-report" disabled>打开计算书</button><button id="download-report" disabled>下载计算书</button></div><p id="report-summary" class="small muted"></p><p id="report-run-id" class="small muted"></p></div>

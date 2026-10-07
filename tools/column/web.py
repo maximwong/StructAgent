@@ -123,6 +123,19 @@ def column_web_binding(registry, root):
         operation = next(o for o in operations if o.id == record['operation'])
         parsed = snapshot.get('parse_result', {})
         calls = snapshot.get('tool_calls', [])
+        safe_error_messages = {
+            'invalid_column_reference': '需要本项目完整且校验有效的柱设计引用。',
+            'column_snapshot_failed': '柱设计结果未能完整保存，本次已停止校核。',
+            'column_calculation_failed': '柱计算结果无法确认，本次已停止。',
+            'column_check_invalid': '柱实配校核结果无法确认，本次已停止。',
+            'ui_start_failed': '无法启动本地流程，请检查运行目录与本机配置。',
+            'workflow_error': '执行流程遇到异常，后续步骤已停止；请保留本次记录供检查。',
+            'state_save_failed': '本次运行状态无法完整保存，请保留已有记录供检查。',
+            'owner_exited': '原运行进程已退出，本次不会自动重做。',
+        }
+        display_errors = [safe_error_messages.get(error.get('code'), '本次流程未完成，请检查输入及运行记录。')
+                          for error in snapshot.get('errors', [])
+                          if error.get('code') not in {'column_check_failed', 'column_design_failed'}]
         if snapshot.get('project_id', record['project_id']) != envelope['project_id']:
             raise ValueError('Project differs.')
         if parsed and parsed.get('envelope') != envelope:
@@ -190,7 +203,8 @@ def column_web_binding(registry, root):
         if snapshot.get('success') is not True and snapshot.get('status') == 'completed':
             raise ValueError('Completion and success differ.')
         if not reports:
-            return {'summary': None, 'check': None, 'display_summary': None}
+            return {'summary': None, 'check': None, 'display_summary': None,
+                    'display_sources': [], 'display_errors': display_errors}
         report = reports[-1]
         summary = {'actual': report['actual'], **report['intermediates'],
                    'design_result_ref': reference, 'materials': report['materials'], 'basis': report['basis']}
@@ -219,7 +233,32 @@ def column_web_binding(registry, root):
                 checked['display_rows'].append({'label': (f"{shown['actual']['bar_count']}Φ{shown['actual']['bar_diameter_mm']} · " if checked['attempts'] else '') + row['display_label'],
                     'basis': row['basis'], 'comparison': f"{row['value']:.9g} {row['relation']} {row['limit']:.9g}",
                     'passed': row['passed']})
+                if not row['passed']:
+                    candidate = f"{shown['actual']['bar_count']}Φ{shown['actual']['bar_diameter_mm']} · " if checked['attempts'] else ''
+                    if row['id'] == 'axial_capacity':
+                        message = f"轴压承载力未通过：N={row['value']:.9g} kN 大于 Nu={row['limit']:.9g} kN。"
+                    else:
+                        message = f"{row['display_label']}未通过：实值 {row['value']:.9g}，要求 {row['relation']} {row['limit']:.9g}。"
+                    display_errors.append(candidate + message)
+        source_model = report['effective_input']
+        from_reference = bool(reference)
+        display_sources = [{'label': '输入来源', 'value': '已核验的原设计输入（来自本项目柱引用），不是当前引用请求中的新工程输入。'
+                            if from_reference else '用户明确填写的本次工程输入，经校核结果一致性验证。'},
+                           {'label': '轴压力 N（kN）', 'value': str(source_model['actions']['N_kN'])},
+                           {'label': '荷载组合来源', 'value': source_model['actions']['combination_source']},
+                           {'label': '双主轴控制有效长度 l0（mm）', 'value': str(source_model['effective_length']['l0_mm'])},
+                           {'label': '有效长度来源', 'value': source_model['effective_length']['source']}]
+        displayed = {'actions.N_kN', 'actions.combination_source', 'effective_length.l0_mm', 'effective_length.source'}
+        for field in fields(MODEL_SCHEMA):
+            if field['path'] in displayed:
+                continue
+            value = source_model
+            for key in field['path'].split('.'):
+                value = value.get(key) if isinstance(value, dict) else None
+            if value is not None:
+                rendered = '是' if value is True else '否' if value is False else CHOICES.get(str(value), str(value))
+                display_sources.append({'label': field['group'] + ' · ' + field['label'], 'value': rendered})
         return {'summary': summary, 'check': checked if check_seen or report['status'] == 'FAIL' else None,
-                'display_summary': display_summary}
+                'display_summary': display_summary, 'display_sources': display_sources, 'display_errors': display_errors}
 
     return StructuredWebBinding('rc_column', '钢筋混凝土柱（本地教学轴压）', operations, form, request, presentation)

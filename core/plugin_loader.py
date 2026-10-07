@@ -158,6 +158,10 @@ def load_plugins(directory, context):
             contribution = _factory(location, manifest)(context)
             if not isinstance(contribution, PluginContribution) or not isinstance(contribution.registry, ToolRegistry):
                 raise PluginLoadError('invalid_contribution', plugin_id)
+            # A profession has one UI owner. Two entry styles with the same identity
+            # would make selection, configuration and history routing ambiguous.
+            if contribution.web is not None and contribution.structured_web:
+                raise PluginLoadError('duplicate_web_profession', plugin_id)
             actual = contribution.registry.list_tools()
             if {item['name'] for item in actual} != set(manifest['tools']):
                 raise PluginLoadError('manifest_tool_mismatch', plugin_id)
@@ -204,6 +208,7 @@ def load_plugins(directory, context):
                 if (not isinstance(binding, StructuredWebBinding) or binding.id != plugin_id
                         or not IDENTIFIER.fullmatch(binding.id)
                         or any(b.id == binding.id for b in structured)
+                        or any(owner['id'] == binding.id for owner in web_owners)
                         or not isinstance(binding.name, str) or not binding.name.strip()
                         or not isinstance(binding.operations, tuple) or not binding.operations
                         or any(not callable(getattr(binding, name)) for name in ('form', 'request', 'presentation'))):
