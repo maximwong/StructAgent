@@ -28,7 +28,7 @@
 
 | 文件 | 输入/预期 |
 | --- | --- |
-| `column-combinations-short.json` | 300×300、l0=3000、N=1200/1400：4Φ16，Nu=1418.796kN，ULS-2控制，设计与校核完成 |
+| `column-combinations-short.json` | 300×300、l0=900、N=1200/1400：4Φ16，Nu=1418.796kN，ULS-2控制，设计与校核完成 |
 | `column-combinations-slender.json` | 同截面、l0=6000、N=900/1170：4Φ20，Nu=1173.933kN，ULS-2控制 |
 | `column-combinations-tied.json` | N=1400/1200/1400：4Φ16，ULS-1与ULS-3均控制，保持原顺序 |
 | `column-combinations-capacity-failure.json` | N=1200/10000：8个候选全部失败，selected=null，后续校核跳过，无成功设计引用 |
