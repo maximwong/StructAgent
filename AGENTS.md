@@ -22,4 +22,5 @@
 - Demo案例与冻结基线在 `demos/`；不要在测试中自动重新生成期望值。`examples.demo_acceptance` 实际调用本机API/CAD，公共CI仅用明确标记的模拟后端验证判定规则。已知失败保持原终态，意外失败停止批次且不自动重试。见 `docs/sentence-demo.md`。
 - 本机UI入口是`app.py`与`启动StructAgent.cmd`；UI只调通用Controller、读Project State和标准ToolResult，不导入旧引擎或调用LISP。专业呈现可扩展，不能在Controller增加楼盖分支。UI操作串行，运行中不退出或重复提交；刷新不取消工作，恢复沿用归属检查，图纸仅从成功结果打开。见`docs/demo-ui.md`。
 - 在PR中交代改动、保持不变的旧功能、测试结果、风险与后续技术债。多人或多模型接手时先阅读当前分支的PR与Issue，避免覆盖他人的未完成工作。
+- 可选开发子Agent由 `devtools/dsh/` 接入，不进入产品Tool Registry。GPT下发明确任务，DSH仅在独立clone修改授权路径；返回补丁后GPT读差异并独立核对测试，再选择性整合。不得把范围提示当作系统沙箱；不向任务复制密钥、真实工程数据或未提交修改。关键工程依据与公式仍由GPT/Astra审查。见 `docs/dsh-development.md`。
 - 不移动、删除或重新指向`v0.1-demo`标签，不把新功能推到`release/v0.1-demo`。后续缺陷修复另建分支、回归后发布新补丁标签；新专业参数或算法能力进入v0.2分支。冻结包不带API密钥、运行状态、DWG或本机环境。见`docs/releases/v0.1-demo.md`。
