@@ -18,6 +18,8 @@
 
 密钥读取本仓库已有`.env`或环境变量，仍经`config.load_settings`校验；不写入MCP配置、不放入命令参数或任务副本。可在本机被忽略的`.dsh-tasks/config.json`修改`dsh_bin`和开发模型`model`。该配置不含密钥。默认开发模型为`deepseek-flash`，不改变网页解析模型。
 
+DSH官方适配器使用Messages API，固定官方根地址为`https://api.deepseek.com/anthropic`，与产品Chat Completions根地址不同。不能把网页的base_url直接传入Harness，否则会得到HTTP 404；此配置仅在开发worker中生效。
+
 ## GPT可调用的接口
 
 | 开发工具 | 行为 |

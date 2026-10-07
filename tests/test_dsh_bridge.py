@@ -6,7 +6,7 @@ import tempfile
 import time
 import unittest
 
-from devtools.dsh.bridge import Jobs, allowed, collect, git, read, save, validate
+from devtools.dsh.bridge import Jobs, allowed, collect, git, read, save, validate, write_patch
 from devtools.dsh.server import TOOLS, handle
 from devtools.dsh.worker import redact
 
@@ -25,6 +25,13 @@ class DshBridgeTests(unittest.TestCase):
 
     def test_valid_contract(self):
         validate("Implement focused tests", ["tests/test_a.py", "docs/"], 300, 4096)
+
+    def test_allowed_requires_exact_file_or_directory_prefix_boundary(self):
+        self.assertTrue(allowed("tests/test_dsh_bridge.py", ["tests/test_dsh_bridge.py"]))
+        self.assertFalse(allowed("tests/test_dsh_bridge_sibling.py", ["tests/test_dsh_bridge.py"]))
+
+        self.assertTrue(allowed("tests/sub/test_dsh_bridge.py", ["tests/"]))
+        self.assertFalse(allowed("tests_extra/test_dsh_bridge.py", ["tests/"]))
 
     def test_redaction(self):
         key = "test-credential-0123456789"
@@ -103,6 +110,17 @@ class DshBridgeTests(unittest.TestCase):
             self.assertEqual(set(result["changed_files"]), {"existing.txt", "new.txt"})
             self.assertIn("+after", result["diff"])
             self.assertIn("+new", result["diff"])
+            # The on-disk patch must apply to a fresh baseline, including on Windows.
+            with tempfile.TemporaryDirectory() as other:
+                clean = Path(other) / "clean"
+                git(repo, "clone", "--quiet", str(repo), str(clean))
+                patch = Path(other) / "changes.patch"
+                write_patch(patch, result["diff"])
+                self.assertNotIn(b"\r\n", patch.read_bytes())
+                git(clean, "apply", "--check", str(patch))
+                git(clean, "apply", str(patch))
+                self.assertEqual((clean / "existing.txt").read_text(), "after\n")
+                self.assertEqual((clean / "new.txt").read_text(), "new\n")
 
 
 if __name__ == "__main__":

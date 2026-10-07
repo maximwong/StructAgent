@@ -23,12 +23,26 @@ def save(path, value):
 
 
 def read(path):
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return json.loads(Path(path).read_text(encoding="utf-8-sig"))
 
 
-def git(repo, *args):
-    result = subprocess.run(["git", "-c", "safe.directory=" + str(repo), "-C", str(repo), *args],
-                            capture_output=True, encoding="utf-8", errors="replace", timeout=60)
+def write_patch(path, diff):
+    """Preserve Git's LF hunks on Windows instead of converting them to CRLF."""
+    Path(path).write_bytes(diff.encode("utf-8"))
+
+
+def remaining(deadline):
+    if deadline is None:
+        return 60
+    value = deadline - time.time()
+    if value <= 0:
+        raise TimeoutError("Developer task total deadline reached")
+    return min(60, value)
+
+
+def git(repo, *args, deadline=None):
+    result = subprocess.run(["git", "-c", "safe.directory=" + Path(repo).as_posix(), "-C", str(repo), *args],
+                            capture_output=True, encoding="utf-8", errors="replace", timeout=remaining(deadline))
     if result.returncode:
         raise RuntimeError("Git operation failed: " + result.stderr[:1000])
     return result.stdout
@@ -55,17 +69,17 @@ def allowed(path, paths):
     return any(path == p or (p.endswith("/") and path.startswith(p)) for p in paths)
 
 
-def collect(workspace, base_commit, paths):
+def collect(workspace, base_commit, paths, *, deadline=None):
     # Stage only inside this independent clone; diff includes tracked, new and committed edits.
-    git(workspace, "add", "-A", "--", ".")
-    changed = git(workspace, "diff", "--cached", "--name-only", "--no-renames", "-z", base_commit).split("\0")
+    git(workspace, "add", "-A", "--", ".", deadline=deadline)
+    changed = git(workspace, "diff", "--cached", "--name-only", "--no-renames", "-z", base_commit, deadline=deadline).split("\0")
     changed = [p for p in changed if p]
     violations = [p for p in changed if not allowed(p, paths)]
     for p in changed:
         candidate = workspace / p
         if candidate.is_symlink():
             violations.append(p)
-    diff = git(workspace, "diff", "--cached", "--binary", "--no-ext-diff", "--no-renames", base_commit)
+    diff = git(workspace, "diff", "--cached", "--binary", "--no-ext-diff", "--no-renames", base_commit, deadline=deadline)
     return {"changed_files": changed, "scope_violations": sorted(set(violations)),
             "diff": diff}
 

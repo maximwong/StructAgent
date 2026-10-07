@@ -10,7 +10,7 @@ import sys
 import threading
 import time
 
-from .bridge import REPO, collect, git, read, save
+from .bridge import REPO, collect, git, read, remaining, save, write_patch
 
 
 def redact(text, secret=""):
@@ -24,7 +24,7 @@ def owned_job():
         raise RuntimeError("This first developer bridge requires Windows Job Objects")
     import win32api
     import win32job
-    handle = win32job.CreateJobObject(None, None)
+    handle = win32job.CreateJobObject(None, "")
     info = win32job.QueryInformationJobObject(handle, win32job.JobObjectExtendedLimitInformation)
     info["BasicLimitInformation"]["LimitFlags"] |= win32job.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
     win32job.SetInformationJobObject(handle, win32job.JobObjectExtendedLimitInformation, info)
@@ -56,11 +56,16 @@ def execute(directory):
         if not launcher.is_file():
             raise ValueError("Configured DSH CLI does not exist")
         # Independent clone, not a shared worktree: no source index or refs are writable through Git.
-        subprocess.run(["git", "-c", "safe.directory=" + request["repo"], "clone", "--no-hardlinks",
-                        "--quiet", "--no-checkout", request["repo"], str(workspace)],
-                       check=True, capture_output=True, timeout=60)
-        git(workspace, "checkout", "--detach", request["base_commit"])
-        git(workspace, "remote", "remove", "origin")
+        source = Path(request["repo"])
+        subprocess.run(["git", "-c", "safe.directory=" + source.as_posix(),
+                        "-c", "safe.directory=" + (source / ".git").as_posix(), "clone", "--no-hardlinks",
+                        "--quiet", "--no-checkout", source.as_posix(), str(workspace)],
+                       check=True, capture_output=True, timeout=remaining(deadline))
+        git(workspace, "checkout", "--detach", request["base_commit"], deadline=deadline)
+        git(workspace, "remote", "remove", "origin", deadline=deadline)
+        if (directory / "cancel").exists() or time.time() >= deadline:
+            state["status"] = "cancelled" if (directory / "cancel").exists() else "timed_out"
+            return process_job
         # Keep only OS/runtime variables. The job does not inherit unrelated service credentials.
         keep = {"PATH", "SYSTEMROOT", "WINDIR", "COMSPEC", "TEMP", "TMP", "USERPROFILE",
                 "LOCALAPPDATA", "APPDATA", "PROGRAMFILES", "PROGRAMFILES(X86)", "PATHEXT"}
@@ -81,8 +86,9 @@ def execute(directory):
             dsh_home=str(directory / "harness-home"),
             patches=(str(REPO / "devtools" / "dsh" / "privacy.patch.yml"),),
             provider="deepseek-official", model=runtime.get("model", "deepseek-flash"),
-            api_key=secret, base_url=settings.base_url, max_tokens=request["max_tokens"],
-            initialize_timeout_seconds=min(30, request["timeout_seconds"]),
+            # Harness uses the Messages API; the product uses Chat Completions at a different root.
+            api_key=secret, base_url="https://api.deepseek.com/anthropic", max_tokens=request["max_tokens"],
+            initialize_timeout_seconds=min(30, remaining(deadline)),
             request_timeout_seconds=30, shutdown_timeout_seconds=1,
         )
         def notification(item):
@@ -119,18 +125,30 @@ def execute(directory):
             if result:
                 state["summary"] = redact(result.final_response, secret)[:12000]
                 state["finish_reason"] = result.finish_reason
+                if result.finish_reason != "completed":
+                    for event in reversed(result.events):
+                        if event.get("type") == "turn/end":
+                            reason = event.get("data", {}).get("reason", {})
+                            state["error"] = redact(json.dumps(reason, ensure_ascii=False), secret)[:3000]
+                            break
             if holder.get("error"):
                 state["error"] = holder["error"]
-            evidence = collect(workspace, request["base_commit"], request["allowed_paths"])
-            (directory / "changes.patch").write_text(redact(evidence.pop("diff"), secret), encoding="utf-8")
+            evidence = collect(workspace, request["base_commit"], request["allowed_paths"], deadline=deadline)
+            # Git patch hunks require LF, including when the reviewed working file currently uses LF.
+            write_patch(directory / "changes.patch", redact(evidence.pop("diff"), secret))
             state.update(evidence)
             if evidence["scope_violations"]:
                 state["status"] = "scope_violation"
+    except (TimeoutError, subprocess.TimeoutExpired) as exc:
+        state.update(status=stop_status or "timed_out", error=redact(str(exc), secret)[:3000])
     except Exception as exc:
         state.update(status="failed", error=redact(str(exc), secret)[:3000])
     finally:
         if harness:
-            harness.close()
+            try:
+                harness.close()
+            except Exception as exc:
+                state.update(status="failed", error="Runtime cleanup failed: " + redact(str(exc), secret)[:1500])
         state["finished_at"] = time.time()
         save(directory / "state.json", state)
         lock = directory.parent / "active.lock"
