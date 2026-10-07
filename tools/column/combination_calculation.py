@@ -80,6 +80,18 @@ def design_column_combinations(parameters):
             "selected": selected, "attempts": attempts, "selection_policy": SELECTION_POLICY}
 
 
+def validate_set_check_semantics(report, expected_parameters, expected_actual):
+    """Recheck the supplied actual scheme and all groups, without design selection.
+
+    A structurally valid report still must match the original request/reference;
+    it cannot replace bars, omit a group, or alter its declared source or controls.
+    """
+    validate_json(report, make_validator(CHECK_SET_OUTPUT))
+    payload = {key: deepcopy(value) for key, value in report.items() if key != "design_result_ref"}
+    if payload != check_column_combinations(deepcopy(expected_parameters), deepcopy(expected_actual)):
+        raise ValueError("Combination check differs from supplied input and actual-scheme recalculation")
+
+
 def validate_set_design_semantics(report):
     """Verify each actual candidate independently; never run design selection."""
     validate_json(report, make_validator(DESIGN_SET_SCHEMA))

@@ -6,7 +6,8 @@ from core.validation import make_validator, validate_json
 from .calculation import validate_actual
 from .combination_input import COMBINATION_PARAMETERS_SCHEMA, validate_combinations
 from .combination_calculation import (CHECK_SET_OUTPUT, DESIGN_SET_OUTPUT, SET_REFERENCE_SCHEMA,
-    check_column_combinations, design_column_combinations, validate_set_design_semantics)
+    check_column_combinations, design_column_combinations, validate_set_design_semantics,
+    validate_set_check_semantics)
 from .schemas import ACTUAL_SCHEMA, CONTEXT_SCHEMA, object_schema
 
 WARNING = "教学非抗震静力理想纯轴压多组合；来源一致性不等于外部分析已核实，PASS仅覆盖声明检查项。"
@@ -83,7 +84,7 @@ class ColumnCombinationCheckTool(_CombinationTool):
             report = check_column_combinations(deepcopy(parameters), deepcopy(actual))
             if reference is not None:
                 report["design_result_ref"] = reference
-            validate_json(report, make_validator(CHECK_SET_OUTPUT))
+            validate_set_check_semantics(report, parameters, actual)
             errors = [{"code": "column_combinations_check_failed",
                 "message": group["combination_id"] + "：" + row["label"] + "未通过。",
                 "path": ["result", "combination_results", index, "report", "checks", check_index]}

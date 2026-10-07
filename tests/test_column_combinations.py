@@ -148,6 +148,26 @@ class CombinationToolTests(unittest.TestCase):
         self.assertTrue(result.errors)
         self.assertEqual(result.result['actual'], actual_bars(14))
 
+    def test_check_rejects_valid_schema_with_replaced_bars_or_omitted_groups(self):
+        parameters = combination_parameters()
+        explicit = request({**parameters, 'actual': actual_bars(14)}, tool=self.check.name)
+        stronger = check_column_combinations(parameters, actual_bars(16))
+        omitted_input = deepcopy(parameters)
+        omitted_input['combinations'].pop()
+        omitted = check_column_combinations(omitted_input, actual_bars(14))
+        for faulty in (stronger, omitted):
+            with patch('tools.column.combination_tools.check_column_combinations', return_value=faulty):
+                result = self.check.execute(explicit)
+            self.assertFalse(result.success)
+            self.assertEqual(result.errors[0]['code'], 'column_combinations_check_invalid')
+        _, ref, _ = self.saved()
+        wrong_stored_actual = check_column_combinations(parameters, actual_bars(18))
+        for faulty in (wrong_stored_actual, omitted):
+            with patch('tools.column.combination_tools.check_column_combinations', return_value=deepcopy(faulty)):
+                result = self.check.execute(request({'design_result_ref': ref}, tool=self.check.name))
+            self.assertFalse(result.success)
+            self.assertEqual(result.errors[0]['code'], 'column_combinations_check_invalid')
+
     def test_projects_versions_ref_formats_exclusive_inputs_and_unicode_paths(self):
         _, ref, path = self.saved()
         self.assertTrue(path.exists())
