@@ -1,6 +1,6 @@
 # 教学理想轴压柱Tool v1
 
-`rc_column`为第二个实际结构计算插件，通过现有本地插件加载器、Registry及通用Controller执行。仅提供`design_column`和`check_column_design`，普通工作流为设计→只读实配校核。无需API或AutoCAD；插件工厂只构建工具对象，不计算或生成状态。柱网页、自然语言解析、CAD及计算书尚未提供。
+`rc_column`为第二个实际结构计算插件，通过现有本地插件加载器、Registry及通用Controller执行。仅提供`design_column`和`check_column_design`，普通工作流为设计→只读实配校核，另有已注册的单步实际方案/引用校核入口。无需API或AutoCAD；插件工厂只构建工具对象，不计算或生成状态。阶段16增加[柱网页](column-ui.md)，自然语言解析、CAD及计算书尚未提供。
 
 工程依据与独立验收数据见[column-basis.md](column-basis.md)。范围是教学、非抗震、静力、理想纯轴压的单根固定矩形柱：C25/C30/C35/C40、HRB400纵筋、HPB300单封闭矩形箍、4根等径角筋。PASS仅表示声明的检查通过，不能作为实际框架柱全项设计结论。
 

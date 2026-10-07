@@ -11,6 +11,7 @@ from agent.controller import AgentController
 from agent.parameter_parser import ParameterParser
 from agent.parameter_parser import ParseResult
 from agent.state import AgentState
+from agent.structured_parser import StructuredParser
 from config import load_settings
 from core.plugin_base import PluginContext
 from core.plugin_loader import load_plugins
@@ -54,7 +55,32 @@ def create_service(root, *, plugin_directory=PLUGINS, plugin_options=None):
         explicit_controller_factory=lambda root, model: controller_factory(root, model=model, plugin_directory=plugin_directory, plugin_options=plugin_options),
         input_form=web.input_form, template_profile=web.template_profile, explicit_profile=web.explicit_profile,
         report_factory=lambda root, envelope: report_controller_factory(root, envelope, plugin_directory=plugin_directory, plugin_options=plugin_options),
-        report_source=web.report_source, report_validator=web.report_validator)
+        report_source=web.report_source, report_validator=web.report_validator,
+        structured_bindings=catalog.structured_web,
+        legacy_profession=catalog.web_owners[0],
+        structured_controller_factory=lambda root, envelope, operation, pin: structured_controller_factory(
+            root, envelope, operation, pin, plugin_directory=plugin_directory, plugin_options=plugin_options))
+
+
+def structured_controller_factory(root, envelope, operation, pin, *, plugin_directory=PLUGINS, plugin_options=None):
+    catalog = load_plugins(plugin_directory, PluginContext(Path(root), plugin_options or {}))
+    workflow = next(w for w in catalog.workflows if w.name == operation.workflow)
+    catalog.registry.get(operation.tool).validate(envelope)
+
+    class BoundState(AgentState):
+        def begin(self, project_id):
+            snapshot = super().begin(project_id)
+            try:
+                pin(snapshot['run_id'])
+            except Exception:
+                snapshot.update(status='error', success=False, steps={'parse': 'failed'}, errors=[{
+                    'code': 'ui_run_link_failed', 'message': '运行归属未能保存，本次未执行工程工具。', 'path': []}])
+                self.save(snapshot, 'FAILED')
+                raise
+            return snapshot
+
+    return AgentController(catalog.registry, StructuredParser(envelope, catalog.registry),
+                           BoundState(Path(root) / 'agent'), [workflow])
 
 
 def main():

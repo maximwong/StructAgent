@@ -26,8 +26,27 @@ class PluginWebBinding:
 
 
 @dataclass(frozen=True)
+class StructuredWebOperation:
+    id: str
+    name: str
+    workflow: str
+    tool: str
+
+
+@dataclass(frozen=True)
+class StructuredWebBinding:
+    id: str
+    name: str
+    operations: tuple
+    form: Callable
+    request: Callable
+    presentation: Callable
+
+
+@dataclass(frozen=True)
 class PluginContribution:
     registry: ToolRegistry
     workflows: tuple
     profiles: tuple = ()
     web: PluginWebBinding | None = None
+    structured_web: tuple = ()
