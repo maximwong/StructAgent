@@ -1,6 +1,6 @@
 # 本地Engineering Plugin接入
 
-阶段14增加本地插件目录发现和API v1。Controller核心不修改，旧CLI注册函数保持可用，旧计算和LISP不迁移。阶段15的正常安装目录`plugins/`启用RC Floor和RC Column；柱插件提供教学纯轴压设计与校核，没有网页、CAD、报告或自然语言声明。测试Echo位于`tests/fixtures/plugins/echo/`，不会随正常启动启用，不代表新增结构设计能力。
+阶段14增加本地插件目录发现和API v1。Controller核心不修改，旧CLI注册函数保持可用，旧计算和LISP不迁移。阶段15的正常安装目录`plugins/`启用RC Floor和RC Column；阶段16增加可选结构化网页贡献，柱提供教学纯轴压设计与校核的本地网页，没有CAD、报告或自然语言声明。测试Echo位于`tests/fixtures/plugins/echo/`，不会随正常启动启用，不代表新增结构设计能力。
 
 ## 查看能力与启动
 
@@ -41,7 +41,15 @@ plugins/
 
 楼盖工厂复用既有注册函数和Adapter，注册四个普通工具。受限重设计仍通过旧显式CLI启用，不加入普通网页。API v1工作流依赖留在同一插件内，未实现跨插件依赖排序和版本范围协商。
 
-[app.py](../app.py)只调用加载器、通用Parser/Controller和插件回调，不导入楼盖模块。`create_service`是正式UI与受控验收的共同组合入口。网页仍只支持一个专业WebBinding；报告沿用单步`artifact_report`契约。其他插件可增加工具、语言配置和工作流，多专业网页选择/呈现尚未接入。
+[app.py](../app.py)只调用加载器、通用Parser/Controller和插件回调，不导入楼盖或柱模块。`create_service`是正式UI与受控验收的共同组合入口。保留唯一旧式WebBinding及其报告/CAD契约，同时允许多个插件提供结构化网页贡献；专业列表由已加载的贡献生成。报告沿用单步`artifact_report`契约。完整的多专业云解析绑定和跨插件工作流仍未接入。
+
+## 可选结构化网页贡献（阶段16）
+
+`PluginContribution.structured_web`默认空tuple，追加在既有字段之后，保持API v1和旧工厂位置参数兼容。每个`StructuredWebBinding`声明专业ID/名称、操作、表单、完整请求校验和只读呈现回调。每个`StructuredWebOperation`只绑定本插件已注册的工作流及其入口工具；重复专业/操作、缺失或错配入口均拒绝，不发布部分能力。同一插件不能同时贡献旧式WebBinding与结构化绑定，避免专业身份、配置和页面分支冲突。
+
+应用负责构建本地`StructuredParser`与原Controller，输入仍是完整Envelope；不构建云模型，不推断关键字段。柱声明设计和单步校核操作，后者的实际方案与引用模式共用一个校核入口，输入互斥由原Schema验证。表单由插件按Schema描述；数据导入在填表前严格验证，展示回调提供中文摘要及逐项结果。加载工厂不执行计算或创建运行。
+
+结构化运行写入与网页一致的`agent`状态目录，每个job在创建运行时绑定自己的run_id。历史按专业/项目筛选后截取最近记录，不用项目最后一次结果代替旧job。记录类型及必要字段受检查；损坏的结构化模式标识不能退回楼盖呈现。结构化专业不提供的CAD/报告操作在服务端也拒绝。插件更新仍需重启，无新增包依赖。详见[柱网页](column-ui.md)和[阶段16报告](stages/phase-16.md)。
 
 ## 验证第二个插件
 
