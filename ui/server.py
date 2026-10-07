@@ -111,6 +111,7 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(500, {"error": "本机运行记录无法读取，请保留现场供检查。", 'code': 'ui_record_invalid'})
 
     def do_POST(self):
+        body_read = False
         try:
             self._auth(mutation=True)
             if self.headers.get("Transfer-Encoding") or self.headers.get_content_type() != "application/json":
@@ -120,8 +121,10 @@ class Handler(BaseHTTPRequestHandler):
                 # Drain only a bounded small body before returning 413; on Windows an
                 # unread body can reset the connection and hide the rejection response.
                 if 20000 < length <= 65536:
+                    body_read = True
                     self.rfile.read(length)
                 raise UIError("输入内容过长或为空。", 413)
+            body_read = True
             body = loads_json(self.rfile.read(length).decode("utf-8"))
             path = urlsplit(self.path).path
             if path == "/api/jobs":
@@ -147,8 +150,23 @@ class Handler(BaseHTTPRequestHandler):
                 return
             raise UIError("找不到此操作。", 404)
         except UIError as exc:
+            if not body_read:
+                self._discard_small_body()
             self.reply(exc.status, {"error": str(exc)})
         except (ValueError, UnicodeError):
             self.reply(400, {"error": "请求内容不是有效的JSON。"})
         except OSError:
             self.reply(500, {"error": "无法写入本机运行目录，请检查路径和可用空间。"})
+
+    def _discard_small_body(self):
+        # Closing an unread POST body can reset the socket on Windows, hiding
+        # a valid 403/415 response. Discard bounded bytes after rejecting the
+        # request; never parse them, invoke the service or read chunked bodies.
+        if self.headers.get('Transfer-Encoding'):
+            return
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+            if 0 < length <= 65536:
+                self.rfile.read(length)
+        except (ValueError, OSError):
+            pass

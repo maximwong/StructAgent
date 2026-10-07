@@ -234,7 +234,8 @@ class ColumnUITests(ColumnUIFixture):
         job, view = self.run_local(self.envelope())
         for index in range(35):
             write_json(self.service.jobs / (f'{index:032x}.json'),
-                       {'id': f'{index:032x}', 'project_name': 'floor', 'project_id': 'other', 'created': 1})
+                       {'id': f'{index:032x}', 'project_name': 'floor', 'project_id': 'other', 'created': 1,
+                        'text': '完整楼盖历史请求', 'profile': self.service.template_profile})
         local = self.service.status('rc_column', view['project_id'])
         self.assertEqual([j['id'] for j in local['jobs']], [job])
         self.assertEqual(self.service.status('rc_column', 'wrong')['jobs'], [])
@@ -341,6 +342,28 @@ class ColumnUITests(ColumnUIFixture):
 
 
 class ColumnHTTPTests(ColumnUIFixture):
+    def test_rejected_post_bodies_return_reliable_errors_without_tools(self):
+        server = LocalServer(self.service, 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
+        self.addCleanup(server.server_close); self.addCleanup(server.shutdown)
+        payload = json.dumps(self.payload(self.envelope())).encode('utf-8')
+        with patch('core.tool_base.EngineeringTool.execute', side_effect=AssertionError('Rejected request must not execute')):
+            for overrides, expected in [({'X-StructAgent-Token': 'bad'}, 403),
+                                        ({'Origin': 'http://evil.example'}, 403),
+                                        ({'Host': 'evil.example'}, 403),
+                                        ({'Content-Type': 'text/plain'}, 415)]:
+                for attempt in range(5):
+                    with self.subTest(overrides=overrides, attempt=attempt):
+                        headers = {'X-StructAgent-Token': server.token, 'Origin': server.url,
+                                   'Content-Type': 'application/json', **overrides}
+                        connection = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=5)
+                        connection.request('POST', '/api/jobs', payload, headers)
+                        response = connection.getresponse()
+                        self.assertEqual(response.status, expected)
+                        self.assertIn('error', json.loads(response.read()))
+                        connection.close()
+        self.assertFalse(list(self.service.jobs.glob('*.json')))
+
     def test_missing_sql_and_bad_job_records_are_local_record_errors(self):
         job, view = self.run_local(self.envelope())
         second, latest = self.run_local(self.envelope())
@@ -368,7 +391,11 @@ class ColumnHTTPTests(ColumnUIFixture):
             self.assertEqual(self.service.state.get(view['snapshot']['run_id']), original_state)
             self.assertEqual(loads_json(path.read_text(encoding='utf-8')), changed)
             for damaged in [[], None, {'id': job}, {**saved, 'created': True},
-                            {**saved, 'envelope': None}, {**saved, 'profession': []}]:
+                            {**saved, 'envelope': None}, {**saved, 'profession': []},
+                            {**saved, 'input_mode': 'unknown'}, {**saved, 'input_mode': None},
+                            {key: value for key, value in saved.items() if key != 'input_mode'},
+                            {**{key: value for key, value in saved.items() if key != 'input_mode'},
+                             'text': '伪装楼盖记录', 'profile': self.service.template_profile}]:
                 write_json(path, damaged)
                 code, error = get('/api/jobs/'+job)
                 self.assertEqual(code, 409)

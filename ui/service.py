@@ -91,6 +91,15 @@ class RunService:
                         or not isinstance(envelope.get('context'), dict)
                         or not isinstance(envelope.get('parameters'), dict)):
                     raise ValueError('Invalid structured job shape.')
+            else:
+                # Existing floor jobs omit input_mode. A damaged structured job
+                # must not fall back to the floor presenter and its CAD wording.
+                if ('input_mode' in record
+                        or any(key in record for key in ('profession', 'operation', 'envelope'))
+                        or not isinstance(record.get('text'), str) or not record['text'].strip()
+                        or record.get('profile') not in (self.template_profile, self.explicit_profile)
+                        or record['profile'] == self.explicit_profile and not isinstance(record.get('model'), dict)):
+                    raise ValueError('Invalid legacy job shape.')
             return record
         except (OSError, ValueError, TypeError, KeyError):
             raise UIError("本机运行记录不可读取或结构不完整，请保留记录供检查。", 409, 'ui_record_invalid') from None
