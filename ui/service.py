@@ -94,11 +94,13 @@ class RunService:
             else:
                 # Existing floor jobs omit input_mode. A damaged structured job
                 # must not fall back to the floor presenter and its CAD wording.
+                # Preserve rejected explicit inputs (including model=None) as
+                # readable invalid_input history; require the field, not validity.
                 if ('input_mode' in record
                         or any(key in record for key in ('profession', 'operation', 'envelope'))
                         or not isinstance(record.get('text'), str) or not record['text'].strip()
                         or record.get('profile') not in (self.template_profile, self.explicit_profile)
-                        or record['profile'] == self.explicit_profile and not isinstance(record.get('model'), dict)):
+                        or record['profile'] == self.explicit_profile and 'model' not in record):
                     raise ValueError('Invalid legacy job shape.')
             return record
         except (OSError, ValueError, TypeError, KeyError):
