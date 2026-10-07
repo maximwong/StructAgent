@@ -183,6 +183,16 @@ class CombinationToolTests(unittest.TestCase):
         with self.assertRaises(ColumnCombinationReferenceError):
             self.store.load(ref, project_id='COLUMN-SET-TEST')
 
+    def test_explicit_actual_report_cannot_introduce_an_unverified_reference(self):
+        parameters = combination_parameters()
+        report = check_column_combinations(parameters, actual_bars())
+        report['design_result_ref'] = 'column-set-' + 'a'*32
+        with patch('tools.column.combination_tools.check_column_combinations', return_value=report):
+            result = self.check.execute(request({**parameters, 'actual': actual_bars()}, tool=self.check.name))
+        self.assertFalse(result.success)
+        self.assertEqual(result.errors[0]['code'], 'column_combinations_check_invalid')
+        self.assertNotIn('design_result_ref', result.result)
+
     def test_rehashed_semantic_tampering_is_rejected(self):
         _, ref, path = self.saved()
         original = json.loads(path.read_text(encoding='utf-8'))

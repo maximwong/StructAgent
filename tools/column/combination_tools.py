@@ -82,9 +82,9 @@ class ColumnCombinationCheckTool(_CombinationTool):
             actual = data["parameters"]["actual"]
         try:
             report = check_column_combinations(deepcopy(parameters), deepcopy(actual))
+            validate_set_check_semantics(report, parameters, actual)
             if reference is not None:
                 report["design_result_ref"] = reference
-            validate_set_check_semantics(report, parameters, actual)
             errors = [{"code": "column_combinations_check_failed",
                 "message": group["combination_id"] + "：" + row["label"] + "未通过。",
                 "path": ["result", "combination_results", index, "report", "checks", check_index]}

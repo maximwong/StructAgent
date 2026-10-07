@@ -86,9 +86,8 @@ def validate_set_check_semantics(report, expected_parameters, expected_actual):
     A structurally valid report still must match the original request/reference;
     it cannot replace bars, omit a group, or alter its declared source or controls.
     """
-    validate_json(report, make_validator(CHECK_SET_OUTPUT))
-    payload = {key: deepcopy(value) for key, value in report.items() if key != "design_result_ref"}
-    if payload != check_column_combinations(deepcopy(expected_parameters), deepcopy(expected_actual)):
+    validate_json(report, make_validator(CHECK_SET_SCHEMA))
+    if report != check_column_combinations(deepcopy(expected_parameters), deepcopy(expected_actual)):
         raise ValueError("Combination check differs from supplied input and actual-scheme recalculation")
 
 
