@@ -24,6 +24,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 
 阶段16新增柱网页入口：选择专业、填写或严格导入完整柱Envelope，执行本地设计→校核，或单步复核实际配筋/本项目引用。无需API、AutoCAD或自然语言口令；结果显示配筋、稳定系数、承载力、逐项判定、输入来源与未覆盖范围。同项目历史绑定各自运行，楼盖原入口保持兼容。操作和验收见[柱网页说明](docs/column-ui.md)，实现及验证证据见[阶段16报告](docs/stages/phase-16.md)，后续顺序与模型分工见[柱开发路线](docs/column-roadmap.md)。
 
+阶段17新增来源绑定的柱多组合设计与实配校核Tool，逐组保留完整N/M/V与来源，按原始N识别所有并列控制组合；非零弯矩/剪力继续拒绝。通过现有插件和Controller运行，原单组合网页不变。完整JSON/CLI、5个匿名算例和引用校核见[柱多组合说明](docs/column-combinations.md)，开发及验收证据见[阶段17报告](docs/stages/phase-17.md)。
+
 阶段3.1已补充CAD超时/取消恢复、Python退出后的会话协调、持久状态与固定部署环境。详见 [修复报告](docs/stages/phase-3.1.md)、[技术债清单](docs/technical-debt.md) 和 [固定环境部署](docs/demo-deployment.md)。
 
 阶段5.1已修复材料字段归属和超时诊断，补齐 [历史产物归档](docs/artifact-archive.md) 与 [离线安装和制品哈希](docs/offline-deployment.md)。真实链路、取消/超时及离线新环境验证通过，详见 [修复报告](docs/stages/phase-5.1.md)。

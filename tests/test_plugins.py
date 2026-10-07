@@ -54,7 +54,8 @@ class PluginTests(unittest.TestCase):
         self.assertEqual([p['id'] for p in view['plugins']], ['rc_column', 'rc_floor'])
         self.assertEqual({t['name'] for t in view['tools']},
                          {'design_floor_system','check_floor_design','generate_floor_cad','generate_floor_report',
-                          'design_column','check_column_design'})
+                          'design_column','check_column_design',
+                          'design_column_combinations','check_column_combinations'})
         self.assertTrue(all(t['version']=='1.0.0' and t['input_schema'] and t['output_schema'] for t in view['tools']))
         self.assertEqual(catalog.web_binding().explicit_profile, 'floor_explicit_v1')
         floor = next(p for p in view['plugins'] if p['id'] == 'rc_floor')

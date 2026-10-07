@@ -1,0 +1,8 @@
+{
+  "source": "Frozen phase-15 Appendix-A four-bar values; independent phase-17 arithmetic before implementation",
+  "short": {"N_kN": [1200, 1400], "diameter_mm": 16, "Nu_kN": 1418.796, "controlling_combination_ids": ["ULS-2"]},
+  "tied": {"N_kN": [1400, 1200, 1400], "diameter_mm": 16, "Nu_kN": 1418.796, "controlling_combination_ids": ["ULS-1", "ULS-3"]},
+  "slender": {"N_kN": [900, 1170], "diameter_mm": 20, "Nu_kN": 1173.933, "controlling_combination_ids": ["ULS-2"]},
+  "weak_short": {"N_kN": [1200, 1400], "actual_diameter_mm": 14, "Nu_kN": 1357.56, "statuses": ["PASS", "FAIL"]},
+  "capacity_failure": {"N_kN": [1200, 10000], "status": "FAIL", "selected": null}
+}
