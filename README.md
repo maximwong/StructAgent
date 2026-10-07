@@ -32,6 +32,8 @@ StructAgent 的目标是可扩展的建筑结构设计智能体平台。**`v0.1-
 
 ## 当前可用内容
 
+开发时可选使用[DeepSeek Harness外部子Agent](docs/dsh-development.md)：GPT下发有范围和时限的小任务，复用本机DSH桌面CLI，在独立代码副本中执行并返回补丁。此开发能力与StructAgent的工程插件和自然语言解析分别配置，不更改产品Controller。
+
 - `legacy/rc_floor/`：原有楼盖程序的独立修复版，保留板、次梁、主梁的连续计算及 RFLOAD/RFALL AutoLISP 命令。
 - `legacy/rc_floor/demo_a.json`：确认的6m×6m办公楼演示参数。梁纵筋HRB400，板筋与箍筋HPB300。
 - `legacy/rc_floor/tests/`：无需启动AutoCAD的计算、报告与CAD数据回归测试。

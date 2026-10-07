@@ -1,0 +1,5 @@
+# Developer environment only. Do not install into .venv-demo.
+# Install SDK with --no-deps to reuse the desktop runtime instead of downloading another runtime.
+deepseek-harness-sdk==0.1.5rc1
+pydantic==2.13.5
+pywin32==312

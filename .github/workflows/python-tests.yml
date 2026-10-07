@@ -40,3 +40,8 @@ jobs:
       - name: Run tests without AutoCAD
         working-directory: legacy/rc_floor
         run: python -m unittest discover -s tests -p "test_*.py"
+      - name: Verify optional developer worker lifecycle without a model call
+        run: |
+          python -m venv .venv-dsh
+          .\.venv-dsh\Scripts\python.exe -m pip install 'pywin32==312'
+          .\.venv-dsh\Scripts\python.exe -m unittest tests.test_dsh_bridge tests.test_dsh_lifecycle -v
