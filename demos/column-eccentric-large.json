@@ -1,0 +1,75 @@
+{
+  "project_id": "COLUMN-ECCENTRIC-DEMO",
+  "tool": "design_column_eccentric",
+  "context": {
+    "unit_system": "mm,kN,kN.m,MPa",
+    "design_code": "GB/T 50010-2010(2024);GB 55008-2021"
+  },
+  "parameters": {
+    "model": {
+      "section": {
+        "b_mm": 300,
+        "h_mm": 400,
+        "cover_to_outer_tie_mm": 35
+      },
+      "effective_length": {
+        "lc_mm": 3000,
+        "source": "Anonymous final section analysis",
+        "analysis_id": "TEACHING-ANALYSIS-1",
+        "covers_bending_plane": true
+      },
+      "materials": {
+        "concrete": "C30",
+        "longitudinal_steel": "HRB400",
+        "tie_steel": "HPB300"
+      },
+      "ties": {
+        "diameter_mm": 8,
+        "spacing_mm": 150,
+        "hook_angle_deg": 135,
+        "hook_extension_mm": 80
+      },
+      "scope": {
+        "purpose": "teaching",
+        "loading": "static",
+        "seismic": false,
+        "gamma_Rd": 1,
+        "uniaxial_eccentric_compression": true
+      },
+      "bending_axis": "x"
+    },
+    "combinations": [
+      {
+        "combination_id": "ULS-1",
+        "actions": {
+          "N_kN": 500,
+          "Mx_kN_m": 125,
+          "My_kN_m": 0,
+          "Vx_kN": 0,
+          "Vy_kN": 0,
+          "N_includes_gamma0": true,
+          "combination_source": "teaching ULS combination including gamma0",
+          "M_includes_gamma0": true
+        },
+        "source": {
+          "analysis_id": "TEACHING-ANALYSIS-1",
+          "member_id": "C1",
+          "section_id": "BOTTOM",
+          "combination_id": "ULS-1",
+          "force_record_id": "ROW-1",
+          "description": "Anonymous complete teaching force vector",
+          "unit_system": "mm,kN,kN.m,MPa",
+          "same_force_vector": true
+        },
+        "second_order": {
+          "analysis_id": "TEACHING-ANALYSIS-1",
+          "combination_id": "ULS-1",
+          "frame_P_Delta_included": true,
+          "member_P_delta_included": true,
+          "additional_eccentricity_included": false,
+          "source": "Anonymous externally analysed final vector, ea excluded"
+        }
+      }
+    ]
+  }
+}

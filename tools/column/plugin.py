@@ -46,3 +46,17 @@ def register_column_layouts(registry, output_root):
             "design_result_ref": ResultBinding("design", ("result", "design_result_ref")),
         }),
     ))
+
+
+def register_column_eccentric(registry, output_root):
+    from .eccentric_store import ColumnEccentricStore
+    from .eccentric_tools import ColumnEccentricDesignTool, ColumnEccentricCheckTool
+    store = ColumnEccentricStore(Path(output_root) / "column-eccentric-designs")
+    registry.register(ColumnEccentricDesignTool(store))
+    registry.register(ColumnEccentricCheckTool(store))
+    return Workflow("rc_column_eccentric", (
+        WorkflowStep("design", "design_column_eccentric"),
+        WorkflowStep("check", "check_column_eccentric", bindings={
+            "design_result_ref": ResultBinding("design", ("result", "design_result_ref")),
+        }),
+    ))

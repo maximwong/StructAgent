@@ -130,3 +130,5 @@ python -m examples.agent_workflow --template office_floor_demo_v1 --text "设计
 当前 [v0.1-demo 里程碑](https://github.com/maximwong/StructAgent/milestone/1) 已列出[Tool Core](https://github.com/maximwong/StructAgent/issues/1)、[楼盖设计接入](https://github.com/maximwong/StructAgent/issues/2)、[CAD接入](https://github.com/maximwong/StructAgent/issues/3)、[一句话出图](https://github.com/maximwong/StructAgent/issues/4)和[稳定演示](https://github.com/maximwong/StructAgent/issues/5)的验收任务。
 
 本项目目前尚未选择开源许可证。公共可见不自动授予再发布或商用许可。
+
+阶段19新增四角筋单向偏压截面 `design_column_eccentric`／`check_column_eccentric`，完整来源绑定JSON/CLI通过原Controller执行设计→实配校核。输入为外部已处理整体及杆件二阶的最终N/M，本地只加一次附加偏心；教学非抗震静力，网页/CAD/报告暂不接入。使用 `python -m examples.column_eccentric --request-file demos/column-eccentric-large.json`，独立实配校核加`--tool-only`。见[使用与范围](docs/column-eccentric-tool.md)、[阶段19](docs/stages/phase-19.md)。
