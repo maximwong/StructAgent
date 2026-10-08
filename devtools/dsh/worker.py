@@ -11,6 +11,7 @@ import threading
 import time
 
 from .bridge import REPO, collect, git, read, remaining, save, write_patch
+from .efficiency import UsageEvidence, reasoning_effort, task_prompt
 
 
 def redact(text, secret=""):
@@ -43,6 +44,7 @@ def execute(directory):
     done = threading.Event()
     stop_status = None
     process_job = None
+    evidence_usage = UsageEvidence()
     deadline = request["created_at"] + request["timeout_seconds"]
     workspace = directory / "workspace"
     try:
@@ -52,6 +54,8 @@ def execute(directory):
         settings = load_settings(Path(request["repo"]) / ".env")
         secret = settings.api_key
         runtime = read(Path(request["repo"]) / ".dsh-tasks" / "config.json")
+        effort = reasoning_effort(runtime)
+        state["reasoning_effort"] = effort
         launcher = Path(runtime["dsh_bin"])
         if not launcher.is_file():
             raise ValueError("Configured DSH CLI does not exist")
@@ -72,15 +76,7 @@ def execute(directory):
         for key in list(os.environ):
             if key.upper() not in keep:
                 del os.environ[key]
-        prompt = (
-            "You are a delegated development agent. Work only in the current independent clone. "
-            "Read AGENTS.md first and relevant source. Do not access .env, other workspaces, user data, "
-            "credentials, desktop applications, network, or remote repositories. Do not commit, push, "
-            "install dependencies, or create child agents. Do not change engineering algorithms unless "
-            "the task explicitly requests it. Only edit these paths: " + json.dumps(request["allowed_paths"]) +
-            ". Run focused tests using the supplied Python executable if appropriate. "
-            "Return a concise summary, exact tests run and results, and unresolved issues. "
-            "Do not claim tests you did not run. Task:\n" + request["task"])
+        prompt = task_prompt(request)
         harness = DeepSeekHarness(
             dsh_bin=str(launcher), profile="sdk-minimal", cwd=str(workspace),
             dsh_home=str(directory / "harness-home"),
@@ -88,10 +84,12 @@ def execute(directory):
             provider="deepseek-official", model=runtime.get("model", "deepseek-flash"),
             # Harness uses the Messages API; the product uses Chat Completions at a different root.
             api_key=secret, base_url="https://api.deepseek.com/anthropic", max_tokens=request["max_tokens"],
+            reasoning_effort=effort,
             initialize_timeout_seconds=min(30, remaining(deadline)),
             request_timeout_seconds=30, shutdown_timeout_seconds=1,
         )
         def notification(item):
+            evidence_usage.observe(item.method, item.payload)
             # Evidence stays private; never expose complete event streams as MCP output.
             value = redact(json.dumps({"method": item.method, "payload": item.payload}, ensure_ascii=False), secret)
             with (directory / "events.jsonl").open("a", encoding="utf-8") as stream:
@@ -123,7 +121,7 @@ def execute(directory):
             result = holder.get("result")
             state.update(status=stop_status or ("completed" if result and result.finish_reason == "completed" else "failed"))
             if result:
-                state["summary"] = redact(result.final_response, secret)[:12000]
+                state["summary"] = redact(result.final_response, secret)[:3000]
                 state["finish_reason"] = result.finish_reason
                 if result.finish_reason != "completed":
                     for event in reversed(result.events):
@@ -150,6 +148,7 @@ def execute(directory):
             except Exception as exc:
                 state.update(status="failed", error="Runtime cleanup failed: " + redact(str(exc), secret)[:1500])
         state["finished_at"] = time.time()
+        state.update(evidence_usage.summary())
         save(directory / "state.json", state)
         lock = directory.parent / "active.lock"
         if lock.exists() and lock.read_text(encoding="ascii").strip() == task_id:
