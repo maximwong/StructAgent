@@ -62,7 +62,7 @@
           "geometry_source": "Teaching dimensions",
           "density_source": "Declared teaching value 8 kN/m3",
           "finish_source": "Two explicit finishes",
-          "additional_weight_source": "Explicit teaching 2 kN allowance"
+          "additional_weight_source": "Explicit teaching declaration: no additional component weight (0 kN)"
         }
       }
     ]
