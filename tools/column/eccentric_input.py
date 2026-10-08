@@ -9,6 +9,7 @@ compression).
 
 from copy import deepcopy
 from decimal import Decimal, localcontext
+from fractions import Fraction
 
 from core.validation import make_validator, reject, validate_json
 
@@ -184,14 +185,14 @@ def _validate_materials(model):
 def _validate_scope(model):
     section = model["section"]
     ties = model["ties"]
-    with localcontext() as ctx:
-        ctx.prec = 60
-        if Decimal(str(section["cover_to_outer_tie_mm"])) + Decimal(str(ties["diameter_mm"])) > 50:
-            reject(
-                "Longitudinal outer cover c+dt >50mm requires measures outside this contract.",
-                ("parameters", "model", "section", "cover_to_outer_tie_mm"),
-                "column_scope_error",
-            )
+    outer_cover = (Fraction(str(section["cover_to_outer_tie_mm"]))
+                   + Fraction(str(ties["diameter_mm"])))
+    if outer_cover > 50:
+        reject(
+            "Longitudinal outer cover c+dt >50mm requires measures outside this contract.",
+            ("parameters", "model", "section", "cover_to_outer_tie_mm"),
+            "column_scope_error",
+        )
 
 
 def validate_parameters(parameters):

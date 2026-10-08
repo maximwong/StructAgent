@@ -154,6 +154,14 @@ class EccentricCalculationTests(unittest.TestCase):
         p=parameters();group=deepcopy(p['combinations'][0]);p['combinations'].append(group)
         with self.assertRaises(ToolValidationError):validate_parameters(p)
 
+    def test_outer_cover_scope_uses_exact_sum_at_limit(self):
+        p=parameters();p['model']['section']['cover_to_outer_tie_mm']=42
+        validate_parameters(p)  # 42+8=50 is inside the declared input scope.
+        p['model']['section']['cover_to_outer_tie_mm']=50
+        p['model']['ties']['diameter_mm']=1e-100
+        with self.assertRaises(ToolValidationError) as caught:validate_parameters(p)
+        self.assertEqual(caught.exception.errors[0]['code'],'column_scope_error')
+
 
 class EccentricToolTests(unittest.TestCase):
     def setUp(self):
