@@ -49,7 +49,7 @@ class ColumnWorkflowTests(unittest.TestCase):
             catalog = load_plugins(ROOT / "plugins", PluginContext(self.output))
         self.assertEqual({plugin["id"] for plugin in catalog.plugins}, {"rc_floor", "rc_column"})
         self.assertEqual({item["name"] for item in catalog.registry.list_tools()},
-                         {"design_column", "check_column_design", "design_column_combinations", "check_column_combinations", "design_floor_system", "check_floor_design",
+                         {"design_column", "check_column_design", "design_column_combinations", "check_column_combinations", "design_column_layouts", "check_column_layouts", "design_floor_system", "check_floor_design",
                           "generate_floor_cad", "generate_floor_report"})
         self.assertEqual(len(catalog.web_bindings), 1)
         self.assertTrue(all(profile.tool != "design_column" for profile in catalog.profiles))

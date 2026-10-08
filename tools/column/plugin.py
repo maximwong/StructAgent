@@ -8,6 +8,8 @@ from .design_store import ColumnDesignStore
 from .design_tool import ColumnDesignTool
 from .combination_store import ColumnCombinationStore
 from .combination_tools import ColumnCombinationDesignTool, ColumnCombinationCheckTool
+from .layout_store import ColumnLayoutStore
+from .layout_tools import ColumnLayoutDesignTool, ColumnLayoutCheckTool
 
 
 def register_column_workflow(registry, output_root):
@@ -29,6 +31,18 @@ def register_column_combinations(registry, output_root):
     return Workflow("rc_column_combinations", (
         WorkflowStep("design", "design_column_combinations"),
         WorkflowStep("check", "check_column_combinations", bindings={
+            "design_result_ref": ResultBinding("design", ("result", "design_result_ref")),
+        }),
+    ))
+
+
+def register_column_layouts(registry, output_root):
+    store = ColumnLayoutStore(Path(output_root) / "column-layout-designs")
+    registry.register(ColumnLayoutDesignTool(store))
+    registry.register(ColumnLayoutCheckTool(store))
+    return Workflow("rc_column_layouts", (
+        WorkflowStep("design", "design_column_layouts"),
+        WorkflowStep("check", "check_column_layouts", bindings={
             "design_result_ref": ResultBinding("design", ("result", "design_result_ref")),
         }),
     ))

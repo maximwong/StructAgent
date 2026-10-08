@@ -1,0 +1,102 @@
+{
+  "project_id": "TEACHING-LAYOUT-CHECK-FAIL",
+  "tool": "check_column_layouts",
+  "context": {
+    "unit_system": "mm,kN,kN.m,MPa",
+    "design_code": "GB/T 50010-2010(2024);GB 55008-2021"
+  },
+  "parameters": {
+    "model": {
+      "section": {
+        "b_mm": 500,
+        "h_mm": 500,
+        "cover_to_outer_tie_mm": 25
+      },
+      "effective_length": {
+        "l0_mm": 2400,
+        "source": "independent teaching model controlling both axes",
+        "covers_both_principal_axes": true,
+        "analysis_id": "TEACHING-ANALYSIS-1"
+      },
+      "materials": {
+        "concrete": "C30",
+        "longitudinal_steel": "HRB400",
+        "tie_steel": "HPB300"
+      },
+      "ties": {
+        "diameter_mm": 8,
+        "spacing_mm": 150,
+        "hook_angle_deg": 135,
+        "hook_extension_mm": 80
+      },
+      "scope": {
+        "purpose": "teaching",
+        "loading": "static",
+        "seismic": false,
+        "ideal_axial_compression": true,
+        "gamma_Rd": 1
+      }
+    },
+    "combinations": [
+      {
+        "combination_id": "ULS-1",
+        "actions": {
+          "N_kN": 3400,
+          "Mx_kN_m": 0,
+          "My_kN_m": 0,
+          "Vx_kN": 0,
+          "Vy_kN": 0,
+          "N_includes_gamma0": true,
+          "combination_source": "teaching ULS combination including gamma0"
+        },
+        "source": {
+          "analysis_id": "TEACHING-ANALYSIS-1",
+          "member_id": "C1",
+          "section_id": "BOTTOM",
+          "combination_id": "ULS-1",
+          "force_record_id": "ROW-1",
+          "description": "Anonymous complete teaching force vector",
+          "unit_system": "mm,kN,kN.m,MPa",
+          "same_force_vector": true
+        }
+      },
+      {
+        "combination_id": "ULS-2",
+        "actions": {
+          "N_kN": 3500,
+          "Mx_kN_m": 0,
+          "My_kN_m": 0,
+          "Vx_kN": 0,
+          "Vy_kN": 0,
+          "N_includes_gamma0": true,
+          "combination_source": "teaching ULS combination including gamma0"
+        },
+        "source": {
+          "analysis_id": "TEACHING-ANALYSIS-1",
+          "member_id": "C1",
+          "section_id": "BOTTOM",
+          "combination_id": "ULS-2",
+          "force_record_id": "ROW-2",
+          "description": "Anonymous complete teaching force vector",
+          "unit_system": "mm,kN,kN.m,MPa",
+          "same_force_vector": true
+        }
+      }
+    ],
+    "layout_candidates": [
+      "eight_perimeter"
+    ],
+    "actual": {
+      "layout": "eight_perimeter",
+      "bar_count": 8,
+      "bar_diameter_mm": 14,
+      "perimeter_closed": true,
+      "crosstie_axes": [
+        "b",
+        "h"
+      ],
+      "crossties_at_every_layer": true,
+      "ends_engage_bars": true
+    }
+  }
+}
