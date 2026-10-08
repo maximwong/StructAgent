@@ -14,7 +14,7 @@
 - `analyze_floor_wall_reactions`：相同引用/映射，增加墙数组；读取旧基线、计算明确等效均布墙自重，逐工况输出基线、墙增量及合计反力，保留同一pattern和来源。
 - 两者只经Registry/Plugin及原Controller调用，新增独立单步工作流；CLI完整JSON，不云解析/网页/CAD/报告。新增不可覆盖`floor-reactions-UUID`引用与项目/版本/内容/来源验证，供后续21显式读取，不自动调用柱工具。
 
-parameters共同字段为`design_result_ref`、`beam_binding`、`scope`，墙工具另加`walls`。beam_binding={member_id,support_ids（4个唯一ID）,coordinate_system:"legacy_main_beam_calculation_supports_mm",source}。scope={purpose:"teaching",beam_model:"legacy_main_beam_constant_EI",baseline_wall_loads_excluded:true,baseline_exclusion_source（必填）,global_frame_analysis:false}。Envelope沿用楼盖context，参数长度mm、密度kN/m3、力kN、分析内部长度m。基线排除声明不是原工程资料认证。
+parameters共同字段为`design_result_ref`、`beam_binding`、`scope`，墙工具另加`walls`。beam_binding={member_id,support_ids（4个唯一ID）,coordinate_system:"legacy_main_beam_calculation_supports_mm",source}。scope={purpose:"teaching",beam_model:"legacy_main_beam_constant_EI",baseline_wall_loads_excluded:true,baseline_exclusion_source（必填）,global_frame_analysis:false,support_vertical_constraint:"bilateral_no_settlement",wall_stiffness_ignored:true}。Envelope沿用楼盖context，参数长度mm、密度kN/m3、力kN、分析内部长度m。基线排除声明不是原工程资料认证。
 
 每墙必填：wall_id、member_id、start_mm/end_mm、height_mm、thickness_mm、density_kN_m3；fixed=true、non_load_bearing=true、direct_on_beam=true、centred_on_beam=true、weight_basis="characteristic"、load_model="uniform_equivalent_over_wall_length"；openings、finishes、additional_weight_kN（显式0可）、source。source={load_record_id,description,geometry_source,density_source,finish_source,additional_weight_source}，所有来源非空。墙数1–8，ID及load_record_id唯一，member_id匹配binding；墙区间在计算支座坐标总长内，端点允许，墙区间不重叠，可相接；不得静默按另一轴网坐标定位。
 
@@ -26,7 +26,7 @@ openings为0–16个矩形={opening_id,x_local_mm,bottom_mm,width_mm,height_mm}�
 
 ## 分析与独立验证
 
-采用Euler–Bernoulli三跨、同一常EI、支座竖向零位移/自由转角模型。每完整跨一个Hermite梁单元，三分点集中力用形函数N(x)的精确一致荷载，墙任意区间均布用积分N(x)q，不等分成三分点集中力。归一EI=1只用于反力，不输出有物理意义的绝对位移。Fraction精确解4个支座转角，全局力及力矩残差应严格0；JSON显示数值与精确分数字符串并存，负反力保留并提醒支座抗拔未验证。
+采用Euler–Bernoulli三跨、同一常EI、支座竖向零位移/自由转角模型。每完整跨一个Hermite梁单元，三分点集中力用形函数N(x)的精确一致荷载，墙任意区间均布用积分N(x)q，不等分成三分点集中力。归一EI=1只用于反力，不输出有物理意义的绝对位移。Fraction精确解4个支座转角，全局力及力矩残差应严格0；JSON显示数值与精确分数字符串并存，负反力保留并提醒支座抗拔未验证；竖向约束按双向不沉降模型，不进行仅受压接触/脱空/抬起后重新分析。
 
 基线核查：本地严格输入校验；从输入独立复核原三跨计算跨度、G/Q表达式（保留教学近似）；原8工况pattern唯一完整、每组四个反力/残差/跨度一致。与精确反力比较只用固定1e-8相对/绝对容差核旧浮点格式；该容差不用于工程承载力PASS。异常、引用错配、非有限、布尔数值、重复/重叠、额外字段、单位或范围错误全部拒绝。
 
