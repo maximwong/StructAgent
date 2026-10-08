@@ -1,0 +1,70 @@
+{
+  "project_id": "REACTION-DEMO",
+  "tool": "analyze_floor_wall_reactions",
+  "context": {
+    "unit_system": "SI",
+    "design_code": "GB"
+  },
+  "parameters": {
+    "design_result_ref": "floor-00000000000000000000000000000000",
+    "beam_binding": {
+      "member_id": "MB-1",
+      "support_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ],
+      "coordinate_system": "legacy_main_beam_calculation_supports_mm",
+      "source": "Anonymous teaching support map"
+    },
+    "scope": {
+      "purpose": "teaching",
+      "beam_model": "legacy_main_beam_constant_EI",
+      "baseline_wall_loads_excluded": true,
+      "baseline_exclusion_source": "Fixed walls excluded from original load record",
+      "global_frame_analysis": false,
+      "support_vertical_constraint": "bilateral_no_settlement",
+      "wall_stiffness_ignored": true
+    },
+    "walls": [
+      {
+        "wall_id": "W1",
+        "member_id": "MB-1",
+        "start_mm": 4000,
+        "end_mm": 8000,
+        "height_mm": 3000,
+        "thickness_mm": 200,
+        "density_kN_m3": 8,
+        "fixed": true,
+        "non_load_bearing": true,
+        "direct_on_beam": true,
+        "centred_on_beam": true,
+        "weight_basis": "characteristic",
+        "load_model": "uniform_equivalent_over_wall_length",
+        "openings": [],
+        "finishes": [
+          {
+            "side": "left",
+            "thickness_mm": 15,
+            "density_kN_m3": 20
+          },
+          {
+            "side": "right",
+            "thickness_mm": 15,
+            "density_kN_m3": 20
+          }
+        ],
+        "additional_weight_kN": 0,
+        "source": {
+          "load_record_id": "WR1",
+          "description": "Anonymous fixed infill wall",
+          "geometry_source": "Teaching dimensions",
+          "density_source": "Declared teaching value 8 kN/m3",
+          "finish_source": "Two explicit finishes",
+          "additional_weight_source": "Explicit teaching 2 kN allowance"
+        }
+      }
+    ]
+  }
+}

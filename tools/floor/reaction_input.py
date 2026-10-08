@@ -1,5 +1,4 @@
 """Complete local reaction input; positions use calculation supports, not grid axes."""
-from copy import deepcopy
 from fractions import Fraction
 
 from core.validation import make_validator, reject, validate_json
@@ -12,7 +11,9 @@ BINDING=object_schema({"member_id":ID,"support_ids":{"type":"array","items":ID,"
     "coordinate_system":{"const":"legacy_main_beam_calculation_supports_mm"},"source":NONEMPTY})
 SCOPE=object_schema({"purpose":{"const":"teaching"},"beam_model":{"const":"legacy_main_beam_constant_EI"},
     "baseline_wall_loads_excluded":{"type":"boolean","const":True},"baseline_exclusion_source":NONEMPTY,
-    "global_frame_analysis":{"type":"boolean","const":False}})
+    "global_frame_analysis":{"type":"boolean","const":False},
+    "support_vertical_constraint":{"const":"bilateral_no_settlement"},
+    "wall_stiffness_ignored":{"type":"boolean","const":True}})
 EXTRACT_PARAMETERS=object_schema({"design_result_ref":REFERENCE,"beam_binding":BINDING,"scope":SCOPE})
 WALL_PARAMETERS=object_schema({**EXTRACT_PARAMETERS["properties"],"walls":{"type":"array","minItems":1,"maxItems":8,"items":WALL_SCHEMA}})
 

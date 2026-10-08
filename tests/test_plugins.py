@@ -53,14 +53,14 @@ class PluginTests(unittest.TestCase):
         view = catalog.describe()
         self.assertEqual([p['id'] for p in view['plugins']], ['rc_column', 'rc_floor'])
         self.assertEqual({t['name'] for t in view['tools']},
-                         {'design_floor_system','check_floor_design','generate_floor_cad','generate_floor_report',
+                         {'design_floor_system','check_floor_design','generate_floor_cad','generate_floor_report','extract_floor_reactions','analyze_floor_wall_reactions',
                           'design_column','check_column_design',
                           'design_column_combinations','check_column_combinations','design_column_layouts','check_column_layouts','design_column_eccentric','check_column_eccentric'})
         self.assertTrue(all(t['version']=='1.0.0' and t['input_schema'] and t['output_schema'] for t in view['tools']))
         self.assertEqual(catalog.web_binding().explicit_profile, 'floor_explicit_v1')
         floor = next(p for p in view['plugins'] if p['id'] == 'rc_floor')
         floor['tools'].clear()
-        self.assertEqual(len(next(p for p in catalog.describe()['plugins'] if p['id'] == 'rc_floor')['tools']),4)
+        self.assertEqual(len(next(p for p in catalog.describe()['plugins'] if p['id'] == 'rc_floor')['tools']),6)
 
     def test_second_plugin_executes_through_unchanged_application_and_controller(self):
         self.floor()
@@ -75,7 +75,7 @@ class PluginTests(unittest.TestCase):
         saved = json.loads(Path(result['tool_calls'][0]['result_path']).read_text(encoding='utf-8'))
         self.assertEqual(saved['result'], {'value':6})
         self.assertEqual((ROOT/'agent/controller.py').read_bytes(), before)
-        self.assertEqual(len(controller.capabilities()),5)
+        self.assertEqual(len(controller.capabilities()),7)
 
     def test_disabled_plugin_code_is_never_imported(self):
         self.floor(); path = self.add(enabled=False)

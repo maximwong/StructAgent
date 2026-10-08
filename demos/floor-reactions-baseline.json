@@ -1,0 +1,31 @@
+{
+  "project_id": "REACTION-DEMO",
+  "tool": "extract_floor_reactions",
+  "context": {
+    "unit_system": "SI",
+    "design_code": "GB"
+  },
+  "parameters": {
+    "design_result_ref": "floor-00000000000000000000000000000000",
+    "beam_binding": {
+      "member_id": "MB-1",
+      "support_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ],
+      "coordinate_system": "legacy_main_beam_calculation_supports_mm",
+      "source": "Anonymous teaching support map"
+    },
+    "scope": {
+      "purpose": "teaching",
+      "beam_model": "legacy_main_beam_constant_EI",
+      "baseline_wall_loads_excluded": true,
+      "baseline_exclusion_source": "Fixed walls excluded from original load record",
+      "global_frame_analysis": false,
+      "support_vertical_constraint": "bilateral_no_settlement",
+      "wall_stiffness_ignored": true
+    }
+  }
+}
