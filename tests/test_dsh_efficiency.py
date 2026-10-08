@@ -45,4 +45,25 @@ class EfficiencyTests(unittest.TestCase):
         self.assertIsNone(meter.summary()['usage'])
 
 
+    def test_reasoning_effort_rejects_list_and_dict(self):
+        for bad in ([], ['off'], {}, {'effort': 'off'}):
+            with self.assertRaises(ValueError): reasoning_effort({'reasoning_effort': bad})
+
+    def test_usage_evidence_ignores_malformed_and_noncountable_values(self):
+        meter = UsageEvidence()
+        for payload in (None, 'x', 5, [1], {'event': [1]}, {'event': 'x'}):
+            meter.observe('session.event', payload)
+        for seq, data in enumerate((None, 'x', 5, [1]), 1):
+            meter.observe('session.event', {'event': {'type': 'assistant/message', 'seq': seq, 'data': data}})
+        meter.observe('session.event', {'event': {'type': 'assistant/message', 'seq': 5, 'data': {'usage': {
+            'inputTokens': -5, 'outputTokens': True, 'cacheReadTokens': '10',
+            'cacheWriteTokens': 0, 'totalTokens': 20}}}})
+        result = meter.summary()
+        self.assertEqual(result['assistant_requests'], 5)
+        self.assertEqual(result['usage'], {'cacheWriteTokens': 0, 'totalTokens': 20})
+        empty = UsageEvidence()
+        empty.observe('session.event', {'event': {'type': 'assistant/message', 'seq': 1, 'data': {}}})
+        self.assertIsNone(empty.summary()['usage'])
+
+
 if __name__ == '__main__': unittest.main()
