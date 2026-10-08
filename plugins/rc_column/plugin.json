@@ -1,10 +1,19 @@
 {
   "id": "rc_column",
   "name": "RC Column",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "api_version": 1,
-  "description": "教学非抗震静力理想轴压矩形柱固定截面设计及只读实配校核；单组合网页，多组合及对称4/6/8筋来源绑定JSON/CLI；不提供自然语言、CAD或计算书。",
+  "description": "教学非抗震静力理想轴压矩形柱固定截面设计及只读实配校核；单组合网页，多组合及对称4/6/8筋来源绑定JSON/CLI；不提供自然语言、CAD或计算书。 新增来源绑定四角筋单向偏压截面JSON/CLI，二阶内力外部处理。",
   "entry_point": "plugin.py:create_plugin",
-  "tools": ["design_column", "check_column_design", "design_column_combinations", "check_column_combinations", "design_column_layouts", "check_column_layouts"],
+  "tools": [
+    "design_column",
+    "check_column_design",
+    "design_column_combinations",
+    "check_column_combinations",
+    "design_column_layouts",
+    "check_column_layouts",
+    "design_column_eccentric",
+    "check_column_eccentric"
+  ],
   "enabled": true
 }
