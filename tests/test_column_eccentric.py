@@ -98,6 +98,13 @@ class EccentricCalculationTests(unittest.TestCase):
         self.assertGreaterEqual(Fraction(i['capacity_interval_N_mm'][1]),upper)
         self.assertLessEqual(Fraction(i['demand_N_mm_exact']),lower)
 
+    def test_small_exact_capacity_unresolved_interval_cannot_authorize_pass(self):
+        # Independently choose x=200mm: sigma=256.08, N=923.26176,
+        # MR=142.67404128, input-M limit=124.20880608. The exact
+        # rational root is not a finite node in the 106..320 bisection.
+        for m,status in ((124.20880608,'INDETERMINATE'),(124.20880607,'PASS'),(124.20880609,'FAIL')):
+            self.assertEqual(check_column_eccentric(parameters(923.26176,m),actual())['status'],status)
+
     def test_control_not_maximum_axial_and_exact_ties(self):
         p=parameters(1200,50)
         group=deepcopy(parameters(500,125)['combinations'][0])
@@ -158,7 +165,8 @@ class EccentricToolTests(unittest.TestCase):
         result=self.design.execute(envelope('design_column_eccentric',parameters()))
         self.assertTrue(result.success,result.errors)
         ref=result.result['design_result_ref']
-        checked=self.check.execute(envelope('check_column_eccentric',{'design_result_ref':ref}))
+        with patch('tools.column.eccentric_calculation.design_column_eccentric',side_effect=AssertionError('reference check cannot design')):
+            checked=self.check.execute(envelope('check_column_eccentric',{'design_result_ref':ref}))
         self.assertTrue(checked.success,checked.errors);self.assertEqual(checked.result['actual'],actual())
         self.assertFalse(self.check.execute(envelope('check_column_eccentric',{'design_result_ref':ref},'OTHER')).success)
         with patch('tools.column.eccentric_calculation.design_column_eccentric',side_effect=AssertionError('no reselection')):

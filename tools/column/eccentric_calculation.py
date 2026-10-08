@@ -163,6 +163,8 @@ def _section(model, combination, actual):
     checks.append({"id":"eccentric_capacity","passed":capacity_pass,"basis":"GB6.2.17,6.2.8-1; conservative interval, no tolerance",
                    "value":number(demand/1000000),"relation":"<=","limit":number(lower/1000000)})
     if not scope_confirmed or not(capacity_pass or capacity_fail):
+        checks.append({"id":"numerical_confirmation","passed":False,
+                       "basis":"unresolved exact interval; no tolerance may authorize PASS"})
         return "INDETERMINATE",info,checks,None
     status="PASS" if all(row["passed"] for row in checks) else "FAIL"
     return status,info,checks,demand/lower if lower>0 else None
@@ -191,8 +193,7 @@ def design_column_eccentric(parameters):
     validate_parameters(parameters)
     attempts=[]
     for diameter in CANDIDATE_DIAMETERS_MM:
-        actual={"bar_count":4,"bar_diameter_mm":diameter,"layout":"four_corner_bars","perimeter_closed":True,
-                "crosstie_axes":[],"crossties_at_every_layer":False,"ends_engage_bars":False}
+        actual=candidate_actual(diameter)
         report=check_column_eccentric(parameters,actual)
         attempts.append(report)
         if report["status"]=="PASS":
@@ -210,5 +211,27 @@ def validate_check_semantics(report, parameters, actual):
 
 def validate_design_semantics(report):
     validate_json(report,make_validator(DESIGN_OUTPUT))
-    if report!=design_column_eccentric(report["effective_input"]):
-        raise ValueError("Eccentric candidate prefix or source/report content mismatch")
+    parameters=report["effective_input"]
+    validate_parameters(parameters)
+    attempts=report["attempts"]
+    for index, attempt in enumerate(attempts):
+        # Verify the published prefix only; reference checks never enter design
+        # or search for/reselect an alternative to the saved actual bars.
+        validate_check_semantics(attempt, parameters, candidate_actual(CANDIDATE_DIAMETERS_MM[index]))
+        if index<len(attempts)-1 and attempt["status"]=="PASS":
+            raise ValueError("Candidate prefix continued past its first PASS")
+    if report["status"]=="PASS":
+        if attempts[-1]["status"]!="PASS" or report["selected"]!=attempts[-1]:
+            raise ValueError("Published selected actual does not match first PASS")
+        policy="first four-bar area candidate passing all sourced combinations, no changes to supplied model"
+    else:
+        if len(attempts)!=8 or any(a["status"]=="PASS" for a in attempts) or report["selected"] is not None:
+            raise ValueError("Failed candidate history incomplete")
+        policy="no verified candidate within plugin scope; not proof of general structural infeasibility"
+    if report["selection_policy"]!=policy:
+        raise ValueError("Unexpected selection policy")
+
+
+def candidate_actual(diameter):
+    return {"bar_count":4,"bar_diameter_mm":diameter,"layout":"four_corner_bars","perimeter_closed":True,
+            "crosstie_axes":[],"crossties_at_every_layer":False,"ends_engage_bars":False}
