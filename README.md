@@ -123,6 +123,8 @@ python -m examples.agent_workflow --template office_floor_demo_v1 --text "设计
 
 ## 协作方向
 
+阶段20新增本地JSON/CLI教学主梁反力提取与直接落梁非承重墙自重分析，保留8工况及来源，不自动生成柱内力或覆盖旧楼盖。使用与验收见[反力工具说明](docs/floor-reactions.md)和[阶段20计划](docs/floor-wall-reactions-plan.md)。
+
 阶段8已冻结稳定Demo；本分支已接入完整参数、独立截面校核、受限循环、DOCX、本地插件发现及教学纯轴压柱CLI/网页能力。Controller只依赖Registry、Schema、ToolResult和Project State；新增能力通过插件注册工具、语言配置、工作流和专业呈现接入。柱网页沿用阶段15算法范围，不扩展楼盖工程范围。
 
 请通过 Issue 记录任务，使用独立分支和 Pull Request 提交修改，在PR中说明影响范围、验证命令和结果。工程算法变更需要给出样例对比和必要的校核依据。参见 [协作指南](CONTRIBUTING.md)。
