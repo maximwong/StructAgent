@@ -49,6 +49,16 @@ DSH官方适配器使用Messages API，固定官方根地址为`https://api.deep
 
 默认串行，一个任务300秒、每请求最多4096输出token；可设置30–900秒及256–8192 token。**输出上限不是整项累计token或费用上限**；输入上下文、多次请求及服务重试仍计费。首版不提供累计费用硬限额，不承诺节省比例。适合样例、文档、明确测试、小模块修复；工程条款、公式、重要架构与最终审查继续交给GPT/Astra。
 
+## 节约额度模式
+
+2026-10-08对两次无补丁失败的事件做了结构化检查：最终消息长推理耗尽4096输出，说明单纯缩小文件范围不足以解决问题。本机SDK与DSH配置Schema支持`reasoningEffort=off/low/high/max`，worker现在默认传入`off`；常规任务关闭长推理。需要时在本地忽略的`.dsh-tasks/config.json`显式设置`reasoning_effort`，未知值拒绝。产品内DeepSeek及GPT/Astra设置不因此改变。
+
+新的任务提示要求：按已确认契约直接写文件、不递归委派、只读命名相关源文件和一次AGENTS、真正含糊时明确提出阻断，不反复重设计；只跑指定专项，最后<=12行摘要。GPT交接一屏任务，DSH承担实现及紧密关联测试；GPT仅审查diff/必要证据，不平行重写同一模块。
+
+`get`结果新增reasoning_effort、assistant_requests及usage摘要，只计算唯一最终assistant/message事件的usage，不重复流中的内嵌usage。缺用量写null，不能当作免费。历史原始事件保留但默认不打印；用量是服务报告token，不能据此推算GPT账户额度、准确账单或节省百分比。
+
+只改变开发DSH的修复运行相关专项，未受影响的工程/实机测试不在本机重复。最终CI依然全量。Astra的三个工程审查点保留，辅助文档/测试不用另启一次工程审查；必要复核只传差异和证据，不复制整个对话历史。
+
 ## 隔离、证据与退出
 
 每项任务拥有独立Git clone、Harness home和会话，`.dsh-tasks/<task_id>/`保存请求、状态、事件、摘要及`changes.patch`。这些本机记录、开发环境均被Git忽略。会话日志上传和插件清单上报在专用patch中关闭；没有web工具或嵌套子Agent。模型运行所需代码与任务仍会发送至DeepSeek API。
