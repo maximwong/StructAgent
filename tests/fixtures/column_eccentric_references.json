@@ -1,0 +1,6 @@
+{
+  "provenance": "Frozen before implementation; independent GB6.2.8-1/6.2.17 calculations reviewed by Astra; Appendix A four-bar total divided equally",
+  "large": {"N_kN": 500, "M_kN_m": 125, "diameter_mm": 20, "x_mm": 116.5501165501, "sigma_s_MPa": 360, "capacity_kN_m": 137.329990862470862, "previous_input_moment_limit_kN_m": 115.048230862470862},
+  "small": {"N_kN": 1200, "M_kN_m": 100, "diameter_mm": 20, "x_mm": 241.4748469790, "sigma_s_MPa": 98.7374100953, "capacity_kN_m": 124.459053261368321, "previous_input_moment_limit_kN_m": 90.470803793745927},
+  "balanced": {"H_mm": 393, "N_kN": 755.04, "M_kN_m": 131.706, "diameter_mm": 20, "x_mm": 176, "capacity_kN_m": 146.8068}
+}
