@@ -22,5 +22,7 @@
 - Demo案例与冻结基线在 `demos/`；不要在测试中自动重新生成期望值。`examples.demo_acceptance` 实际调用本机API/CAD，公共CI仅用明确标记的模拟后端验证判定规则。已知失败保持原终态，意外失败停止批次且不自动重试。见 `docs/sentence-demo.md`。
 - 本机UI入口是`app.py`与`启动StructAgent.cmd`；UI只调通用Controller、读Project State和标准ToolResult，不导入旧引擎或调用LISP。专业呈现可扩展，不能在Controller增加楼盖分支。UI操作串行，运行中不退出或重复提交；刷新不取消工作，恢复沿用归属检查，图纸仅从成功结果打开。见`docs/demo-ui.md`。
 - 在PR中交代改动、保持不变的旧功能、测试结果、风险与后续技术债。多人或多模型接手时先阅读当前分支的PR与Issue，避免覆盖他人的未完成工作。
-- 可选开发子Agent由 `devtools/dsh/` 接入，不进入产品Tool Registry。GPT下发明确任务，DSH仅在独立clone修改授权路径；返回补丁后GPT读差异并独立核对测试，再选择性整合。不得把范围提示当作系统沙箱；不向任务复制密钥、真实工程数据或未提交修改。关键工程依据与公式仍由GPT/Astra审查。见 `docs/dsh-development.md`。
+- 常规开发任务默认委派DSH（现有`devtools/dsh/`、`sdk-minimal`、默认`deepseek-flash`）；安装能力仍为独立可选开发组件，不进入产品Tool Registry。GPT负责工程契约、核心算法、拆分、审核、独立验证、整合及Git交付；Astra按`docs/column-roadmap.md`承担只读工程依据/参考/实现/交付审查，产品内DeepSeek仍只负责后续用户需求解析。DSH只实现冻结契约下的Schema/校验、数据转换、测试、样例、文档及辅助呈现，不自行确定条款、公式、材料/稳定系数、配筋判定或工程范围。
+- DSH任务必须指定已提交基线、精确路径、单一目标、既定输入输出/独立期望、验收命令和排除项；默认300秒及每请求4096输出token，一个模块/测试文件，最多两个紧密关联文件；一次一个DSH任务，GPT可处理独立工作，不同时修改其任务文件。GPT读取完整补丁并独立核对必要测试后选择性整合，运行时完成不等于评审通过；没有合适任务或接管时记录原因。
+- `max-tokens`、超时和异常保留失败状态；可审核利用部分补丁，不冒称任务完成。同一任务因`max-tokens`中断后只重试一次更小任务，再失败由GPT接管，不误判账户余额。阶段报告分别记录任务终态、采用补丁、GPT验证、Astra复核及最终CI；usage可用才记录，不承诺节省比例。DSH不得自动提交/推送/合并；不得自动重放未知CAD。范围提示与独立clone不是OS沙箱，不复制密钥、真实工程数据或未提交修改，累计费用硬上限尚未实现。见`docs/dsh-development.md`。
 - 不移动、删除或重新指向`v0.1-demo`标签，不把新功能推到`release/v0.1-demo`。后续缺陷修复另建分支、回归后发布新补丁标签；新专业参数或算法能力进入v0.2分支。冻结包不带API密钥、运行状态、DWG或本机环境。见`docs/releases/v0.1-demo.md`。
